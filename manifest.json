@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Ops Map",
+  "description": "A new-tab campaign map for fast context resumption.",
+  "version": "1.0.0",
+  "permissions": ["storage"],
+  "chrome_url_overrides": {
+    "newtab": "newtab.html"
+  }
+}

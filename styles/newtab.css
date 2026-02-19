@@ -1,0 +1,446 @@
+/*
+This stylesheet defines the visual language of the new-tab map: calm background, soft campaign regions,
+and high-contrast project launch nodes. It is separate from the JavaScript modules so rendering logic stays
+focused on behavior while this file owns atmosphere, spacing, and readability across desktop and laptop sizes.
+It is consumed by `newtab.html` and aligns with DOM classes generated in `src/main.js`.
+*/
+
+:root {
+  --font-ui: "Avenir Next", "Futura", "Trebuchet MS", sans-serif;
+  --ink-strong: #132136;
+  --ink-soft: #38506f;
+  --surface-glass: rgba(255, 255, 255, 0.58);
+  --surface-solid: #f4f7fb;
+  --line-soft: rgba(19, 33, 54, 0.14);
+  --accent: #1f6fe0;
+  --shadow-large: 0 20px 45px rgba(24, 49, 87, 0.22);
+  --shadow-soft: 0 10px 24px rgba(24, 49, 87, 0.12);
+  --transition-fast: 140ms ease;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-ui);
+  color: var(--ink-strong);
+  background: radial-gradient(circle at 10% 10%, #fef8ec 0, transparent 42%),
+    radial-gradient(circle at 90% 5%, #e5f2ff 0, transparent 46%),
+    linear-gradient(160deg, #f0f5fb 0%, #eff9f2 52%, #f9f5f1 100%);
+  overflow: hidden;
+}
+
+#app-shell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* The top bar stays translucent so the map remains the visual center. */
+.top-bar {
+  position: absolute;
+  inset: 18px 20px auto 20px;
+  z-index: 20;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--line-soft);
+  background: var(--surface-glass);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--shadow-soft);
+}
+
+.brand-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.brand-block h1 {
+  margin: 0;
+  font-size: 1.1rem;
+  letter-spacing: 0.03em;
+}
+
+.brand-block p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+}
+
+.top-actions {
+  display: flex;
+  gap: 10px;
+}
+
+button {
+  border: 1px solid rgba(23, 53, 93, 0.22);
+  border-radius: 12px;
+  padding: 9px 13px;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--ink-strong);
+  background: rgba(255, 255, 255, 0.82);
+  cursor: pointer;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast),
+    background var(--transition-fast);
+}
+
+button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(25, 49, 81, 0.16);
+  background: #ffffff;
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+#canvas {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* Campaign regions are intentionally oversized and translucent to support overlap readability. */
+.campaign-region {
+  position: absolute;
+  width: 350px;
+  height: 350px;
+  margin: -175px 0 0 -175px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(17, 37, 62, 0.24);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28), 0 16px 24px rgba(25, 44, 71, 0.12);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 9px;
+  padding: 24px 22px;
+  user-select: none;
+  animation: fade-in-up 280ms ease both;
+}
+
+.campaign-region.dragging {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.38), 0 24px 34px rgba(25, 44, 71, 0.2);
+}
+
+.campaign-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.campaign-name {
+  font-size: 1.03rem;
+  font-weight: 700;
+  line-height: 1.2;
+  max-width: 70%;
+  border-radius: 8px;
+  padding: 2px 4px;
+  outline: none;
+}
+
+.campaign-name:focus {
+  background: rgba(255, 255, 255, 0.38);
+  box-shadow: 0 0 0 2px rgba(31, 111, 224, 0.22);
+}
+
+.campaign-meta-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.campaign-delete {
+  padding: 4px 8px;
+  border-radius: 10px;
+  font-size: 0.76rem;
+  background: rgba(255, 255, 255, 0.54);
+}
+
+.project-create {
+  padding: 5px 9px;
+  border-radius: 10px;
+  font-size: 0.76rem;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.mission-block {
+  margin-top: 4px;
+  background: rgba(255, 255, 255, 0.35);
+  border-radius: 14px;
+  border: 1px solid rgba(11, 29, 53, 0.12);
+  padding: 10px 12px;
+}
+
+.mission-label {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(18, 41, 69, 0.72);
+}
+
+.mission-editor {
+  margin-top: 5px;
+  min-height: 36px;
+  max-height: 82px;
+  overflow-y: auto;
+  outline: none;
+  padding: 4px 5px;
+  border-radius: 8px;
+  line-height: 1.35;
+  color: #1f3047;
+}
+
+.mission-editor:focus {
+  background: rgba(255, 255, 255, 0.52);
+  box-shadow: 0 0 0 2px rgba(31, 111, 224, 0.18);
+}
+
+.mission-editor[data-empty="true"]::before {
+  content: "What's the next mission?";
+  color: rgba(26, 49, 78, 0.58);
+}
+
+.previous-mission {
+  margin-top: 8px;
+  font-size: 0.78rem;
+  color: #2e425f;
+  line-height: 1.34;
+}
+
+.previous-mission strong {
+  font-weight: 700;
+}
+
+/* Project nodes sit above campaign layers and act as direct launch buttons. */
+.project-node {
+  position: absolute;
+  z-index: 12;
+  min-width: 116px;
+  max-width: 160px;
+  border-radius: 999px;
+  border: 1px solid rgba(19, 48, 82, 0.22);
+  background: linear-gradient(155deg, #ffffff 0%, #f0f5ff 100%);
+  color: #1a3151;
+  box-shadow: 0 12px 20px rgba(20, 44, 74, 0.2);
+  padding: 8px 14px;
+  text-align: center;
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transform: translate(-50%, -50%);
+  animation: fade-in-up 220ms ease both;
+}
+
+.project-node:hover {
+  box-shadow: 0 16px 24px rgba(19, 45, 79, 0.24);
+  transform: translate(-50%, -52%);
+}
+
+.project-node:focus-visible {
+  outline: 2px solid rgba(24, 98, 211, 0.5);
+  outline-offset: 2px;
+}
+
+#empty-state {
+  position: absolute;
+  z-index: 14;
+  left: 50%;
+  top: 54%;
+  width: min(560px, calc(100% - 40px));
+  transform: translate(-50%, -50%);
+  border-radius: 20px;
+  border: 1px solid var(--line-soft);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-large);
+  padding: 26px;
+  text-align: center;
+}
+
+#empty-state h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+#empty-state p {
+  margin: 10px auto 18px;
+  color: var(--ink-soft);
+  max-width: 440px;
+  line-height: 1.45;
+}
+
+/* The panel is non-modal and lightweight, so editing stays on-canvas. */
+#panel-root {
+  position: absolute;
+  z-index: 24;
+  right: 20px;
+  bottom: 20px;
+  width: min(420px, calc(100% - 36px));
+  border-radius: 16px;
+  border: 1px solid var(--line-soft);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--shadow-large);
+  padding: 16px;
+  animation: fade-in-up 200ms ease both;
+}
+
+#panel-root[hidden] {
+  display: none;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.panel-header h3 {
+  margin: 0;
+  font-size: 0.98rem;
+}
+
+.panel-close {
+  border-radius: 10px;
+  padding: 5px 9px;
+  font-size: 0.78rem;
+}
+
+.panel-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.panel-field label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(23, 44, 71, 0.72);
+}
+
+.panel-field input,
+.panel-field select,
+.panel-field textarea {
+  width: 100%;
+  border: 1px solid rgba(24, 51, 84, 0.2);
+  border-radius: 10px;
+  padding: 9px 10px;
+  font: inherit;
+  color: var(--ink-strong);
+  background: #fbfdff;
+}
+
+.panel-field textarea {
+  min-height: 74px;
+  resize: vertical;
+}
+
+.panel-field small {
+  color: var(--ink-soft);
+  line-height: 1.3;
+}
+
+.checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 7px;
+  max-height: 140px;
+  overflow-y: auto;
+  padding: 3px;
+}
+
+.checkbox-chip {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  border: 1px solid rgba(20, 42, 70, 0.16);
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: #f9fbff;
+}
+
+.checkbox-chip input {
+  width: auto;
+  margin: 0;
+}
+
+.helper-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.helper-row input {
+  flex: 1;
+}
+
+.panel-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.panel-error {
+  margin: 6px 0 0;
+  min-height: 18px;
+  font-size: 0.8rem;
+  color: #af2240;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 900px) {
+  .top-bar {
+    inset: 12px 12px auto 12px;
+    padding: 12px;
+  }
+
+  .brand-block p {
+    display: none;
+  }
+
+  .campaign-region {
+    width: 300px;
+    height: 300px;
+    margin: -150px 0 0 -150px;
+    padding: 20px 18px;
+  }
+
+  #panel-root {
+    right: 12px;
+    bottom: 12px;
+    width: min(420px, calc(100% - 24px));
+  }
+}

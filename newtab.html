@@ -1,0 +1,40 @@
+<!--
+This file is the single page the browser shows whenever a new tab opens for this extension.
+It exists separately so the map experience has one focused document that can render quickly without route logic.
+It hosts the shared shell elements and hands control to `src/main.js`, which renders campaigns, projects, and editors into this structure.
+-->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ops Map</title>
+    <link rel="stylesheet" href="styles/newtab.css" />
+  </head>
+  <body>
+    <div id="app-shell">
+      <header class="top-bar">
+        <div class="brand-block">
+          <h1>Ops Map</h1>
+          <p id="state-summary">Loading your campaigns...</p>
+        </div>
+        <div class="top-actions">
+          <button id="add-campaign-button" type="button">New Campaign</button>
+          <button id="add-project-button" type="button">New Project</button>
+        </div>
+      </header>
+
+      <main id="canvas" aria-label="Campaign map canvas"></main>
+
+      <section id="empty-state" hidden>
+        <h2>Your map is empty</h2>
+        <p>Create your first campaign, then add projects and missions directly on the canvas.</p>
+        <button id="empty-state-create" type="button">Create First Campaign</button>
+      </section>
+
+      <section id="panel-root" hidden aria-live="polite"></section>
+    </div>
+
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>

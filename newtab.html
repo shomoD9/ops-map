@@ -19,6 +19,13 @@ It hosts the shared shell elements and hands control to `src/main.js`, which ren
           <p id="state-summary">Loading your campaigns...</p>
         </div>
         <div class="top-actions">
+          <label class="device-pref-control" for="browser-target-select">
+            <span>Web opens in</span>
+            <select id="browser-target-select">
+              <option value="current">Current Browser</option>
+              <option value="edge">Edge (best effort)</option>
+            </select>
+          </label>
           <button id="add-campaign-button" type="button">New Campaign</button>
           <button id="add-project-button" type="button">New Project</button>
         </div>

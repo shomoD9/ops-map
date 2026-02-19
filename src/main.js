@@ -4,7 +4,7 @@ It exists separately because it coordinates UI rendering, event handling, and pe
 It imports domain rules from `src/model.js`, layout helpers from `src/layout.js`, and storage adapters from `src/storage.js`.
 */
 
-import { ensureCampaignPositions, computeProjectPositions } from "./layout.js";
+import { ensureCampaignPositions, computeProjectPositions, resolveCampaignRadius } from "./layout.js";
 import {
   createEmptyState,
   normalizeState,
@@ -20,9 +20,17 @@ import {
   inferLinkType,
   normalizeProjectLink,
   LINK_TYPE_HELP,
-  DEFAULT_CAMPAIGN_COLORS
+  DEFAULT_CAMPAIGN_COLORS,
+  PROJECT_MODES
 } from "./model.js";
 import { loadState, saveState, subscribeToStateChanges } from "./storage.js";
+import {
+  loadDevicePrefs,
+  saveDevicePrefs,
+  subscribeToDevicePrefsChanges,
+  DEFAULT_DEVICE_PREFS,
+  WEB_BROWSER_TARGETS
+} from "./devicePrefs.js";
 
 const canvasElement = document.querySelector("#canvas");
 const summaryElement = document.querySelector("#state-summary");
@@ -31,14 +39,21 @@ const emptyStateElement = document.querySelector("#empty-state");
 const addCampaignButton = document.querySelector("#add-campaign-button");
 const addProjectButton = document.querySelector("#add-project-button");
 const emptyStateCreateButton = document.querySelector("#empty-state-create");
+const browserTargetSelect = document.querySelector("#browser-target-select");
 
-const CAMPAIGN_RADIUS = 175;
+const CAMPAIGN_EDGE_PADDING = 18;
+const PROJECT_TOOLTIP_MS = 1600;
 const SAVE_DEBOUNCE_MS = 220;
 
 let state = createEmptyState();
+let devicePrefs = { ...DEFAULT_DEVICE_PREFS };
 let saveTimer = null;
 let dragSession = null;
+let dragFrameId = null;
 let unsubscribeStorage = null;
+let unsubscribeDevicePrefs = null;
+
+const projectTooltipTimers = new WeakMap();
 
 function getViewport() {
   return {
@@ -51,12 +66,45 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
-function clampCampaignPosition(position) {
+function sanitizeWebBrowserTarget(target) {
+  return target === WEB_BROWSER_TARGETS.EDGE ? WEB_BROWSER_TARGETS.EDGE : WEB_BROWSER_TARGETS.CURRENT;
+}
+
+function applyDevicePrefs(nextPrefs) {
+  devicePrefs = {
+    ...DEFAULT_DEVICE_PREFS,
+    ...(nextPrefs || {}),
+    webBrowserTarget: sanitizeWebBrowserTarget(nextPrefs?.webBrowserTarget)
+  };
+
+  if (browserTargetSelect) {
+    browserTargetSelect.value = devicePrefs.webBrowserTarget;
+  }
+}
+
+function clampToBounds(value, min, max) {
+  if (max < min) {
+    return (min + max) / 2;
+  }
+
+  return clamp(value, min, max);
+}
+
+function clampCampaignPosition(position, campaignCount = state.campaigns.length) {
   const viewport = getViewport();
+  const campaignRadius = resolveCampaignRadius(viewport, campaignCount);
 
   return {
-    x: clamp(position.x, CAMPAIGN_RADIUS + 25, viewport.width - CAMPAIGN_RADIUS - 25),
-    y: clamp(position.y, CAMPAIGN_RADIUS + 25, viewport.height - CAMPAIGN_RADIUS - 25)
+    x: clampToBounds(
+      position.x,
+      campaignRadius + CAMPAIGN_EDGE_PADDING,
+      viewport.width - campaignRadius - CAMPAIGN_EDGE_PADDING
+    ),
+    y: clampToBounds(
+      position.y,
+      campaignRadius + CAMPAIGN_EDGE_PADDING,
+      viewport.height - campaignRadius - CAMPAIGN_EDGE_PADDING
+    )
   };
 }
 
@@ -177,14 +225,24 @@ function createActionsRow(primaryLabel, onDelete) {
 
 function nextCampaignPlacement() {
   const viewport = getViewport();
-  const count = state.campaigns.length;
-  const angle = -Math.PI / 2 + (2 * Math.PI * count) / Math.max(3, count + 1);
-  const radius = Math.max(110, Math.min(viewport.width, viewport.height) * 0.22);
+  const totalCampaigns = state.campaigns.length + 1;
+  const placementIndex = totalCampaigns - 1;
+  const angle = -Math.PI / 2 + (2 * Math.PI * placementIndex) / Math.max(3, totalCampaigns);
+  const campaignRadius = resolveCampaignRadius(viewport, totalCampaigns);
+  const idealSpacing = campaignRadius * 1.52;
+  const idealOrbitRadius = totalCampaigns > 1 ? (idealSpacing * totalCampaigns) / (Math.PI * 2) : 0;
+  const minOrbitRadius = totalCampaigns > 1 ? campaignRadius * 0.72 : 0;
+  const maxOrbitRadius = Math.max(0, Math.min(viewport.width, viewport.height) * 0.34);
+  const orbitRadius =
+    maxOrbitRadius < minOrbitRadius ? maxOrbitRadius : clamp(idealOrbitRadius, minOrbitRadius, maxOrbitRadius);
 
-  return clampCampaignPosition({
-    x: viewport.width / 2 + Math.cos(angle) * radius,
-    y: viewport.height / 2 + 18 + Math.sin(angle) * radius
-  });
+  return clampCampaignPosition(
+    {
+      x: viewport.width / 2 + Math.cos(angle) * orbitRadius,
+      y: viewport.height / 2 + 18 + Math.sin(angle) * orbitRadius
+    },
+    totalCampaigns
+  );
 }
 
 function openCampaignEditor() {
@@ -231,7 +289,52 @@ function openCampaignEditor() {
   });
 }
 
-function launchProject(project) {
+function showProjectTooltip(projectNode, message) {
+  if (!projectNode) {
+    return;
+  }
+
+  const existingTimer = projectTooltipTimers.get(projectNode);
+  if (existingTimer) {
+    window.clearTimeout(existingTimer);
+  }
+
+  projectNode.dataset.tip = message;
+  projectNode.dataset.tipVisible = "true";
+
+  const nextTimer = window.setTimeout(() => {
+    delete projectNode.dataset.tipVisible;
+    delete projectNode.dataset.tip;
+    projectTooltipTimers.delete(projectNode);
+  }, PROJECT_TOOLTIP_MS);
+
+  projectTooltipTimers.set(projectNode, nextTimer);
+}
+
+function openWebLink(link) {
+  if (sanitizeWebBrowserTarget(devicePrefs.webBrowserTarget) === WEB_BROWSER_TARGETS.CURRENT) {
+    window.open(link, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  // Edge routing depends on protocol handler support, so we keep a safe fallback.
+  try {
+    const edgeTarget = `microsoft-edge:${link}`;
+    const opened = window.open(edgeTarget, "_blank", "noopener,noreferrer");
+    if (!opened) {
+      window.open(link, "_blank", "noopener,noreferrer");
+    }
+  } catch (error) {
+    window.open(link, "_blank", "noopener,noreferrer");
+  }
+}
+
+function launchProject(project, projectNode) {
+  if (project.mode === PROJECT_MODES.PHYSICAL) {
+    showProjectTooltip(projectNode, "Physical artifact — no link");
+    return;
+  }
+
   const link = (project.link || "").trim();
 
   if (!link) {
@@ -241,7 +344,7 @@ function launchProject(project) {
   }
 
   if (/^https?:\/\//i.test(link)) {
-    window.open(link, "_blank", "noopener,noreferrer");
+    openWebLink(link);
     return;
   }
 
@@ -294,10 +397,34 @@ function openProjectEditor(options = {}) {
   nameInput.value = project?.name ?? "";
   nameInput.autofocus = true;
 
+  const projectModeInitial =
+    project?.mode === PROJECT_MODES.PHYSICAL ? PROJECT_MODES.PHYSICAL : PROJECT_MODES.LAUNCHABLE;
+
+  const projectModeSelect = document.createElement("select");
+  [
+    { value: PROJECT_MODES.LAUNCHABLE, label: "Launchable" },
+    { value: PROJECT_MODES.PHYSICAL, label: "Physical Artifact" }
+  ].forEach((optionInfo) => {
+    const option = document.createElement("option");
+    option.value = optionInfo.value;
+    option.textContent = optionInfo.label;
+    option.selected = optionInfo.value === projectModeInitial;
+    projectModeSelect.append(option);
+  });
+
   const linkTypeSelect = document.createElement("select");
   const linkTypeInitial = project?.linkType || inferLinkType(project?.link || "");
-
+  const orderedLinkTypes = ["web", "obsidian", "vscode", "cursor", "antigravity", "custom"];
+  const linkTypeEntries = orderedLinkTypes
+    .filter((key) => LINK_TYPE_HELP[key])
+    .map((key) => [key, LINK_TYPE_HELP[key]]);
   Object.entries(LINK_TYPE_HELP).forEach(([key, info]) => {
+    if (!orderedLinkTypes.includes(key)) {
+      linkTypeEntries.push([key, info]);
+    }
+  });
+
+  linkTypeEntries.forEach(([key, info]) => {
     const option = document.createElement("option");
     option.value = key;
     option.textContent = info.label;
@@ -331,9 +458,12 @@ function openProjectEditor(options = {}) {
 
   const linkInput = document.createElement("input");
   linkInput.type = "text";
-  linkInput.required = true;
   linkInput.placeholder = "Final link or URI";
   linkInput.value = project?.link ?? "";
+  linkInput.required = projectModeInitial === PROJECT_MODES.LAUNCHABLE;
+
+  const linkTypeField = createField("Link Type", linkTypeSelect);
+  const linkField = createField("Link", linkInput);
 
   const campaignsCheckboxes = buildCampaignCheckboxes(defaultCampaignIds);
   const campaignsField = createField("Campaigns", campaignsCheckboxes, "A project can belong to one or many campaigns.");
@@ -347,7 +477,26 @@ function openProjectEditor(options = {}) {
     helperHint.textContent = LINK_TYPE_HELP[selectedType].hint;
   };
 
+  const refreshProjectModeFields = () => {
+    const isLaunchable = projectModeSelect.value === PROJECT_MODES.LAUNCHABLE;
+
+    linkTypeField.hidden = !isLaunchable;
+    helperField.hidden = !isLaunchable;
+    linkField.hidden = !isLaunchable;
+
+    linkTypeSelect.disabled = !isLaunchable;
+    helperInput.disabled = !isLaunchable;
+    buildButton.disabled = !isLaunchable;
+    linkInput.disabled = !isLaunchable;
+    linkInput.required = isLaunchable;
+
+    if (!isLaunchable) {
+      errorElement.textContent = "";
+    }
+  };
+
   linkTypeSelect.addEventListener("change", refreshHelperMetadata);
+  projectModeSelect.addEventListener("change", refreshProjectModeFields);
 
   buildButton.addEventListener("click", () => {
     const built = buildLinkFromHelper(linkTypeSelect.value, helperInput.value);
@@ -360,6 +509,8 @@ function openProjectEditor(options = {}) {
     linkInput.value = built;
     errorElement.textContent = "";
   });
+
+  refreshProjectModeFields();
 
   const handleDelete = isEditMode
     ? () => {
@@ -375,9 +526,10 @@ function openProjectEditor(options = {}) {
 
   formElement.append(
     createField("Name", nameInput),
-    createField("Link Type", linkTypeSelect),
+    createField("Project Mode", projectModeSelect, "Physical artifacts stay on the map but do not launch links."),
+    linkTypeField,
     helperField,
-    createField("Link", linkInput),
+    linkField,
     campaignsField,
     errorElement,
     createActionsRow(isEditMode ? "Save Project" : "Create Project", handleDelete)
@@ -400,7 +552,10 @@ function openProjectEditor(options = {}) {
       return;
     }
 
-    if (!linkInput.value.trim()) {
+    const normalizedProjectMode =
+      projectModeSelect.value === PROJECT_MODES.PHYSICAL ? PROJECT_MODES.PHYSICAL : PROJECT_MODES.LAUNCHABLE;
+
+    if (normalizedProjectMode === PROJECT_MODES.LAUNCHABLE && !linkInput.value.trim()) {
       errorElement.textContent = "Project link is required.";
       return;
     }
@@ -408,8 +563,12 @@ function openProjectEditor(options = {}) {
     const normalizedLinkType = linkTypeSelect.value;
     const payload = {
       name: nameInput.value,
+      mode: normalizedProjectMode,
       linkType: normalizedLinkType,
-      link: normalizeProjectLink(linkInput.value, normalizedLinkType),
+      link:
+        normalizedProjectMode === PROJECT_MODES.PHYSICAL
+          ? ""
+          : normalizeProjectLink(linkInput.value, normalizedLinkType),
       campaignIds
     };
 
@@ -427,19 +586,67 @@ function openProjectEditor(options = {}) {
   });
 }
 
-function startCampaignDrag(event, campaign) {
+function flushDragFrame() {
+  dragFrameId = null;
+
+  if (!dragSession?.pendingPosition) {
+    return;
+  }
+
+  applyState(repositionCampaign(state, dragSession.campaignId, dragSession.pendingPosition), { persist: false });
+}
+
+function scheduleDragFrame() {
+  if (dragFrameId !== null) {
+    return;
+  }
+
+  dragFrameId = window.requestAnimationFrame(flushDragFrame);
+}
+
+function finalizeCampaignDrag(pointerId = null) {
+  if (!dragSession || (pointerId !== null && dragSession.pointerId !== pointerId)) {
+    return;
+  }
+
+  if (dragFrameId !== null) {
+    window.cancelAnimationFrame(dragFrameId);
+    dragFrameId = null;
+  }
+
+  if (dragSession.pendingPosition) {
+    applyState(repositionCampaign(state, dragSession.campaignId, dragSession.pendingPosition));
+  }
+
+  document.body.classList.remove("is-dragging-campaign");
+  dragSession = null;
+}
+
+function startCampaignDrag(event, campaign, regionElement) {
   const interactiveTarget = event.target.closest("button,[contenteditable='true'],input,textarea,select,label");
   if (interactiveTarget) {
     return;
   }
 
+  const origin = clampCampaignPosition({ x: campaign.x, y: campaign.y });
+
   // Dragging starts from the region body so repositioning feels direct and spatial.
   dragSession = {
     campaignId: campaign.id,
     pointerId: event.pointerId,
-    offsetX: event.clientX - campaign.x,
-    offsetY: event.clientY - campaign.y
+    offsetX: event.clientX - origin.x,
+    offsetY: event.clientY - origin.y,
+    pendingPosition: origin
   };
+
+  try {
+    regionElement.setPointerCapture(event.pointerId);
+  } catch (error) {
+    // Pointer capture can fail on rapid re-renders; window-level handlers still keep drag usable.
+  }
+
+  document.body.classList.add("is-dragging-campaign");
+  event.preventDefault();
 }
 
 function handlePointerMove(event) {
@@ -452,15 +659,20 @@ function handlePointerMove(event) {
     y: event.clientY - dragSession.offsetY
   });
 
-  applyState(repositionCampaign(state, dragSession.campaignId, position));
-}
-
-function handlePointerUp(event) {
-  if (!dragSession || dragSession.pointerId !== event.pointerId) {
+  if (
+    dragSession.pendingPosition &&
+    position.x === dragSession.pendingPosition.x &&
+    position.y === dragSession.pendingPosition.y
+  ) {
     return;
   }
 
-  dragSession = null;
+  dragSession.pendingPosition = position;
+  scheduleDragFrame();
+}
+
+function handlePointerUp(event) {
+  finalizeCampaignDrag(event.pointerId);
 }
 
 function applyMissionEditorPlaceholder(missionEditor, missionValue) {
@@ -469,11 +681,12 @@ function applyMissionEditorPlaceholder(missionEditor, missionValue) {
   missionEditor.dataset.empty = mission ? "false" : "true";
 }
 
-function renderCampaign(campaign) {
+function renderCampaign(campaign, campaignRadius) {
   const region = document.createElement("article");
   region.className = "campaign-region";
   region.style.left = `${campaign.x}px`;
   region.style.top = `${campaign.y}px`;
+  region.style.setProperty("--campaign-size-runtime", `${campaignRadius * 2}px`);
   region.style.background = `radial-gradient(circle at 30% 24%, ${hexToRgba(campaign.color, 0.78)} 0, ${hexToRgba(
     campaign.color,
     0.4
@@ -574,7 +787,7 @@ function renderCampaign(campaign) {
     region.classList.add("dragging");
   }
 
-  region.addEventListener("pointerdown", (event) => startCampaignDrag(event, campaign));
+  region.addEventListener("pointerdown", (event) => startCampaignDrag(event, campaign, region));
 
   return region;
 }
@@ -582,14 +795,17 @@ function renderCampaign(campaign) {
 function renderProject(project, position) {
   const button = document.createElement("button");
   button.type = "button";
-  button.className = "project-node";
+  button.className = `project-node${project.mode === PROJECT_MODES.PHYSICAL ? " physical" : ""}`;
   button.style.left = `${position.x}px`;
   button.style.top = `${position.y}px`;
   button.textContent = project.name;
-  button.title = `${project.name}\n${project.link || "No link set"}\nClick to launch, right-click to edit`;
+  button.title =
+    project.mode === PROJECT_MODES.PHYSICAL
+      ? `${project.name}\nPhysical artifact (no link)\nRight-click to edit`
+      : `${project.name}\n${project.link || "No link set"}\nClick to launch, right-click to edit`;
 
   button.addEventListener("click", () => {
-    launchProject(project);
+    launchProject(project, button);
   });
 
   // Right-click opens direct editing without sacrificing one-click launch behavior.
@@ -617,12 +833,14 @@ function renderEmptyState() {
 
 function render() {
   canvasElement.innerHTML = "";
+  const viewport = getViewport();
+  const campaignRadius = resolveCampaignRadius(viewport, state.campaigns.length);
 
   state.campaigns.forEach((campaign) => {
-    canvasElement.append(renderCampaign(campaign));
+    canvasElement.append(renderCampaign(campaign, campaignRadius));
   });
 
-  const projectPositions = computeProjectPositions(state, getViewport());
+  const projectPositions = computeProjectPositions(state, viewport);
 
   state.projects.forEach((project) => {
     const position = projectPositions.get(project.id);
@@ -641,8 +859,27 @@ function bindGlobalEvents() {
   addProjectButton.addEventListener("click", () => openProjectEditor());
   emptyStateCreateButton.addEventListener("click", openCampaignEditor);
 
+  if (browserTargetSelect) {
+    browserTargetSelect.addEventListener("change", async () => {
+      const nextPrefs = {
+        ...devicePrefs,
+        webBrowserTarget: sanitizeWebBrowserTarget(browserTargetSelect.value)
+      };
+
+      applyDevicePrefs(nextPrefs);
+
+      try {
+        await saveDevicePrefs(nextPrefs);
+      } catch (error) {
+        console.warn("Ops Map: failed to save local device preferences.", error);
+      }
+    });
+  }
+
   window.addEventListener("pointermove", handlePointerMove);
   window.addEventListener("pointerup", handlePointerUp);
+  window.addEventListener("pointercancel", handlePointerUp);
+  window.addEventListener("blur", () => finalizeCampaignDrag());
 
   window.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
@@ -657,9 +894,10 @@ function bindGlobalEvents() {
 }
 
 async function initialize() {
+  const [loadedState, loadedDevicePrefs] = await Promise.all([loadState(), loadDevicePrefs()]);
+  applyDevicePrefs(loadedDevicePrefs || DEFAULT_DEVICE_PREFS);
   bindGlobalEvents();
 
-  const loadedState = await loadState();
   applyState(normalizeState(loadedState || createEmptyState()));
 
   // Storage subscription keeps multiple Chrome windows in sync without manual refresh.
@@ -673,8 +911,13 @@ async function initialize() {
     applyState(normalized, { persist: false });
   });
 
+  unsubscribeDevicePrefs = subscribeToDevicePrefsChanges((incomingPrefs) => {
+    applyDevicePrefs(incomingPrefs || DEFAULT_DEVICE_PREFS);
+  });
+
   window.addEventListener("beforeunload", () => {
     unsubscribeStorage?.();
+    unsubscribeDevicePrefs?.();
   });
 }
 

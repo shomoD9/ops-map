@@ -37,6 +37,11 @@ export const LINK_TYPE_HELP = {
     helperLabel: "Absolute file path",
     hint: "We convert paths to cursor://file/... for Cursor deep links."
   },
+  antigravity: {
+    label: "Google Antigravity",
+    helperLabel: "Absolute file path",
+    hint: "We convert paths to antigravity://file/... for Antigravity deep links."
+  },
   custom: {
     label: "Custom URI",
     helperLabel: "Full URI",
@@ -44,6 +49,12 @@ export const LINK_TYPE_HELP = {
   }
 };
 
+export const PROJECT_MODES = {
+  LAUNCHABLE: "launchable",
+  PHYSICAL: "physical"
+};
+
+const PROJECT_MODE_KEYS = Object.values(PROJECT_MODES);
 const LINK_TYPE_KEYS = Object.keys(LINK_TYPE_HELP);
 
 function createId(prefix) {
@@ -81,6 +92,10 @@ function withUpdatedStamp(state) {
 
 function sanitizeLinkType(linkType) {
   return LINK_TYPE_KEYS.includes(linkType) ? linkType : "web";
+}
+
+function sanitizeProjectMode(mode) {
+  return PROJECT_MODE_KEYS.includes(mode) ? mode : PROJECT_MODES.LAUNCHABLE;
 }
 
 function sanitizeColor(color, fallbackIndex) {
@@ -142,6 +157,14 @@ export function buildLinkFromHelper(linkType, helperInput) {
     return `cursor://file/${cleaned.replace(/^\/+/, "")}`;
   }
 
+  if (linkType === "antigravity") {
+    if (cleaned.startsWith("antigravity://")) {
+      return cleaned;
+    }
+
+    return `antigravity://file/${cleaned.replace(/^\/+/, "")}`;
+  }
+
   return cleaned;
 }
 
@@ -158,6 +181,10 @@ export function inferLinkType(link) {
 
   if (cleaned.startsWith("cursor://")) {
     return "cursor";
+  }
+
+  if (cleaned.startsWith("antigravity://")) {
+    return "antigravity";
   }
 
   if (cleaned.startsWith("http://") || cleaned.startsWith("https://")) {
@@ -218,6 +245,7 @@ export function normalizeState(rawState) {
           }
 
           const id = cleanText(project.id) || createId("project");
+          const mode = sanitizeProjectMode(project.mode);
           const linkType = sanitizeLinkType(project.linkType || inferLinkType(project.link));
           const memberships = uniqueIds(project.campaignIds).filter((campaignId) => campaignIds.has(campaignId));
 
@@ -228,6 +256,7 @@ export function normalizeState(rawState) {
           return {
             id,
             name: cleanText(project.name) || `Project ${index + 1}`,
+            mode,
             linkType,
             link: normalizeProjectLink(project.link, linkType),
             campaignIds: memberships
@@ -381,19 +410,24 @@ export function deleteCampaign(state, campaignId) {
 
 export function addProject(state, projectDraft) {
   const name = cleanText(projectDraft?.name);
+  const mode = sanitizeProjectMode(projectDraft?.mode);
   const linkType = sanitizeLinkType(projectDraft?.linkType);
-  const link = normalizeProjectLink(projectDraft?.link, linkType);
+  const link = mode === PROJECT_MODES.PHYSICAL ? "" : normalizeProjectLink(projectDraft?.link, linkType);
   const validCampaignIds = new Set(state.campaigns.map((campaign) => campaign.id));
   const campaignIds = uniqueIds(projectDraft?.campaignIds).filter((campaignId) => validCampaignIds.has(campaignId));
 
-  // Projects are launchpads in this product, so a missing link is treated as invalid input.
-  if (!name || !link || campaignIds.length === 0) {
+  if (!name || campaignIds.length === 0) {
+    return state;
+  }
+
+  if (mode === PROJECT_MODES.LAUNCHABLE && !link) {
     return state;
   }
 
   const project = {
     id: createId("project"),
     name,
+    mode,
     link,
     linkType,
     campaignIds
@@ -416,6 +450,7 @@ export function updateProject(state, projectId, projectPatch) {
       }
 
       const linkType = sanitizeLinkType(projectPatch?.linkType ?? project.linkType);
+      const mode = sanitizeProjectMode(projectPatch?.mode ?? project.mode);
       const nextCampaignIds = uniqueIds(projectPatch?.campaignIds ?? project.campaignIds).filter((campaignId) =>
         validCampaignIds.has(campaignId)
       );
@@ -427,16 +462,19 @@ export function updateProject(state, projectId, projectPatch) {
       }
 
       const nextName = cleanText(projectPatch?.name ?? project.name);
-      const nextLink = normalizeProjectLink(projectPatch?.link ?? project.link, linkType);
+      const nextLink =
+        mode === PROJECT_MODES.PHYSICAL
+          ? ""
+          : normalizeProjectLink(projectPatch?.link ?? project.link, linkType);
 
-      // We keep link non-empty so every node remains one-click launchable.
-      if (!nextLink) {
+      if (mode === PROJECT_MODES.LAUNCHABLE && !nextLink) {
         return project;
       }
 
       if (
         nextName === project.name &&
         nextLink === project.link &&
+        mode === project.mode &&
         linkType === project.linkType &&
         nextCampaignIds.length === project.campaignIds.length &&
         nextCampaignIds.every((campaignId) => project.campaignIds.includes(campaignId))
@@ -449,6 +487,7 @@ export function updateProject(state, projectId, projectPatch) {
       return {
         ...project,
         name: nextName || project.name,
+        mode,
         link: nextLink,
         linkType,
         campaignIds: nextCampaignIds

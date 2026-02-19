@@ -4,11 +4,36 @@ It exists separately because spatial logic changes for readability reasons and s
 `src/main.js` calls these helpers to place campaigns and project nodes, while `src/model.js` stays focused on business rules.
 */
 
-const CANVAS_PADDING = 90;
-const CAMPAIGN_RADIUS = 175;
+const CANVAS_PADDING = 72;
+const CAMPAIGN_RADIUS_MIN = 120;
+const CAMPAIGN_RADIUS_MAX = 172;
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
+}
+
+function clampToBounds(value, min, max) {
+  if (max < min) {
+    return (min + max) / 2;
+  }
+
+  return clamp(value, min, max);
+}
+
+function clampPositive(value, min, max) {
+  if (max < min) {
+    return Math.max(0, max);
+  }
+
+  return clamp(value, min, max);
+}
+
+export function resolveCampaignRadius(viewport, campaignCount = 0) {
+  const minDimension = Math.max(320, Math.min(viewport.width, viewport.height));
+  const baseRadius = clamp(minDimension * 0.18, CAMPAIGN_RADIUS_MIN, CAMPAIGN_RADIUS_MAX);
+  const crowdingPenalty = Math.max(0, campaignCount - 3) * 7;
+
+  return clamp(baseRadius - crowdingPenalty, CAMPAIGN_RADIUS_MIN, CAMPAIGN_RADIUS_MAX);
 }
 
 function hashToUnit(seed) {
@@ -22,12 +47,15 @@ function hashToUnit(seed) {
   return Math.abs(hash % 1000) / 1000;
 }
 
-function campaignBounds(viewport) {
+function campaignBounds(viewport, campaignCount) {
+  const radius = resolveCampaignRadius(viewport, campaignCount);
+
   return {
-    minX: CANVAS_PADDING + CAMPAIGN_RADIUS,
-    maxX: viewport.width - CANVAS_PADDING - CAMPAIGN_RADIUS,
-    minY: CANVAS_PADDING + CAMPAIGN_RADIUS,
-    maxY: viewport.height - CANVAS_PADDING - CAMPAIGN_RADIUS
+    radius,
+    minX: CANVAS_PADDING + radius,
+    maxX: viewport.width - CANVAS_PADDING - radius,
+    minY: CANVAS_PADDING + radius,
+    maxY: viewport.height - CANVAS_PADDING - radius
   };
 }
 
@@ -45,11 +73,17 @@ export function ensureCampaignPositions(state, viewport) {
     return state;
   }
 
-  const bounds = campaignBounds(viewport);
+  const count = state.campaigns.length;
+  const bounds = campaignBounds(viewport, count);
   const centerX = viewport.width / 2;
   const centerY = viewport.height / 2 + 22;
-  const orbitRadius = Math.max(80, Math.min(viewport.width, viewport.height) * 0.26);
-  const count = state.campaigns.length;
+  const maxOrbitX = Math.max(0, Math.min(centerX - bounds.minX, bounds.maxX - centerX));
+  const maxOrbitY = Math.max(0, Math.min(centerY - bounds.minY, bounds.maxY - centerY));
+  const maxOrbitRadius = Math.min(maxOrbitX, maxOrbitY);
+  const idealSpacing = bounds.radius * 1.52;
+  const idealOrbitRadius = count > 1 ? (idealSpacing * count) / (Math.PI * 2) : 0;
+  const minOrbitRadius = count > 1 ? bounds.radius * 0.72 : 0;
+  const orbitRadius = clampPositive(idealOrbitRadius, minOrbitRadius, maxOrbitRadius);
 
   let didChange = false;
 
@@ -66,8 +100,8 @@ export function ensureCampaignPositions(state, viewport) {
     }
 
     // Positions are clamped to keep campaigns usable after viewport resizes.
-    const clampedX = clamp(x, bounds.minX, bounds.maxX);
-    const clampedY = clamp(y, bounds.minY, bounds.maxY);
+    const clampedX = clampToBounds(x, bounds.minX, bounds.maxX);
+    const clampedY = clampToBounds(y, bounds.minY, bounds.maxY);
 
     if (clampedX !== x || clampedY !== y) {
       didChange = true;
@@ -144,8 +178,8 @@ export function computeProjectPositions(state, viewport) {
     const offsetY = spreadRadius ? Math.sin(angle) * spreadRadius : 0;
 
     positions.set(project.id, {
-      x: clamp(centroid.x + offsetX, bounds.minX, bounds.maxX),
-      y: clamp(centroid.y + offsetY, bounds.minY, bounds.maxY)
+      x: clampToBounds(centroid.x + offsetX, bounds.minX, bounds.maxX),
+      y: clampToBounds(centroid.y + offsetY, bounds.minY, bounds.maxY)
     });
   });
 

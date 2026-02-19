@@ -3,6 +3,7 @@ This file is the single page the browser shows whenever a new tab opens for this
 It exists separately so the map experience has one focused document that can render quickly without route logic.
 It hosts the shared shell elements and hands control to `src/main.js`, which renders campaigns, projects, editors,
 and per-device launch preferences into this structure.
+It also provides transfer controls for export/import and a Google Sync scaffold entry for future cloud sync.
 -->
 <!doctype html>
 <html lang="en">
@@ -28,6 +29,9 @@ and per-device launch preferences into this structure.
               <option value="edge">Edge (best effort)</option>
             </select>
           </label>
+          <button id="export-data-button" type="button">Export Data</button>
+          <button id="import-data-button" type="button">Import Data</button>
+          <button id="google-sync-button" type="button">Google Sync</button>
           <button id="add-campaign-button" type="button">New Campaign</button>
           <button id="add-project-button" type="button">New Project</button>
         </div>
@@ -42,6 +46,8 @@ and per-device launch preferences into this structure.
       </section>
 
       <section id="panel-root" hidden aria-live="polite"></section>
+      <!-- Hidden input keeps import native and lightweight without a persistent visible form field. -->
+      <input id="import-file-input" type="file" accept=".json,application/json" hidden />
     </div>
 
     <script type="module" src="src/main.js"></script>

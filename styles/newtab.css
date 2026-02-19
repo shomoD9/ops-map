@@ -502,6 +502,45 @@ body.is-dragging-campaign {
   color: #af2240;
 }
 
+.panel-note {
+  margin: 10px 0;
+  color: var(--ink-soft);
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+/* This callout is used for import replace confirmations and sync capability disclaimers. */
+.panel-warning {
+  margin: 10px 0;
+  border-radius: 12px;
+  border: 1px solid rgba(164, 68, 80, 0.35);
+  background: rgba(255, 236, 240, 0.82);
+  padding: 10px 12px;
+}
+
+.panel-warning h4 {
+  margin: 0;
+  font-size: 0.86rem;
+  color: #7d2335;
+}
+
+.panel-warning p {
+  margin: 7px 0 0;
+  font-size: 0.82rem;
+  color: #5d2a38;
+  line-height: 1.35;
+}
+
+.destructive-action {
+  border-color: rgba(150, 32, 56, 0.5);
+  background: rgba(183, 38, 68, 0.1);
+  color: #8c1d34;
+}
+
+.destructive-action:hover {
+  background: rgba(183, 38, 68, 0.2);
+}
+
 @keyframes fade-in-up {
   from {
     opacity: 0;

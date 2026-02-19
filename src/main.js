@@ -2,7 +2,8 @@
 This file is the runtime orchestrator for the new-tab map.
 It exists separately because it coordinates UI rendering, event handling, and persistence calls across the other modules.
 It imports domain rules from `src/model.js`, layout helpers from `src/layout.js`, sync storage adapters from `src/storage.js`,
-and local device-preference adapters from `src/devicePrefs.js` so browser-launch behavior can vary per machine.
+local device-preference adapters from `src/devicePrefs.js`, and transfer/scaffold helpers from `src/transfer.js`
+and `src/googleSync.js` for cross-browser handoff workflows and future cloud sync.
 */
 
 import { ensureCampaignPositions, computeProjectPositions, resolveCampaignRadius } from "./layout.js";
@@ -32,6 +33,13 @@ import {
   DEFAULT_DEVICE_PREFS,
   WEB_BROWSER_TARGETS
 } from "./devicePrefs.js";
+import {
+  buildExportPayload,
+  serializeExportPayload,
+  parseImportPayload,
+  suggestExportFileName
+} from "./transfer.js";
+import { getGoogleSyncStatus, isGoogleSyncAvailable } from "./googleSync.js";
 
 const canvasElement = document.querySelector("#canvas");
 const summaryElement = document.querySelector("#state-summary");
@@ -41,6 +49,10 @@ const addCampaignButton = document.querySelector("#add-campaign-button");
 const addProjectButton = document.querySelector("#add-project-button");
 const emptyStateCreateButton = document.querySelector("#empty-state-create");
 const browserTargetSelect = document.querySelector("#browser-target-select");
+const exportDataButton = document.querySelector("#export-data-button");
+const importDataButton = document.querySelector("#import-data-button");
+const googleSyncButton = document.querySelector("#google-sync-button");
+const importFileInput = document.querySelector("#import-file-input");
 
 const CAMPAIGN_EDGE_PADDING = 18;
 const PROJECT_TOOLTIP_MS = 1600;
@@ -224,6 +236,181 @@ function createActionsRow(primaryLabel, onDelete) {
   actionsElement.append(saveButton);
 
   return actionsElement;
+}
+
+function getStateEntityCounts(targetState) {
+  return {
+    campaigns: Array.isArray(targetState?.campaigns) ? targetState.campaigns.length : 0,
+    projects: Array.isArray(targetState?.projects) ? targetState.projects.length : 0
+  };
+}
+
+function triggerJsonDownload(fileName, content) {
+  const blob = new Blob([content], { type: "application/json" });
+  const url = window.URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+
+  // Releasing the object URL avoids leaking transient in-memory blob URLs.
+  window.setTimeout(() => window.URL.revokeObjectURL(url), 0);
+}
+
+function openInfoPanel(titleText, messageText) {
+  const formElement = createPanelScaffold(titleText);
+  formElement.addEventListener("submit", (event) => event.preventDefault());
+
+  const messageElement = document.createElement("p");
+  messageElement.className = "panel-note";
+  messageElement.textContent = messageText;
+
+  const actionsElement = document.createElement("div");
+  actionsElement.className = "panel-actions";
+
+  const closeButton = document.createElement("button");
+  closeButton.type = "button";
+  closeButton.textContent = "Close";
+  closeButton.addEventListener("click", closePanel);
+
+  actionsElement.append(closeButton);
+  formElement.append(messageElement, actionsElement);
+}
+
+function exportStateToFile() {
+  try {
+    const payload = buildExportPayload(state);
+    const serialized = serializeExportPayload(payload);
+    triggerJsonDownload(suggestExportFileName(), serialized);
+  } catch (error) {
+    openInfoPanel("Export Failed", "Ops Map could not export data right now. Try again.");
+  }
+}
+
+function openImportConfirmationPanel(importSourceLabel, incomingState) {
+  const formElement = createPanelScaffold("Import Data (Replace Current Map)");
+  formElement.addEventListener("submit", (event) => event.preventDefault());
+
+  const currentCounts = getStateEntityCounts(state);
+  const incomingCounts = getStateEntityCounts(incomingState);
+
+  const warningCallout = document.createElement("div");
+  warningCallout.className = "panel-warning";
+
+  const warningTitle = document.createElement("h4");
+  warningTitle.textContent = "This will fully replace your current map.";
+
+  const warningBody = document.createElement("p");
+  warningBody.textContent =
+    "Campaigns, projects, missions, and layout positions from the import file will overwrite your current Ops Map data.";
+
+  warningCallout.append(warningTitle, warningBody);
+
+  const importSummary = document.createElement("p");
+  importSummary.className = "panel-note";
+  importSummary.textContent = `Import file: ${importSourceLabel || "Selected file"} · Incoming ${incomingCounts.campaigns} campaign${
+    incomingCounts.campaigns === 1 ? "" : "s"
+  }, ${incomingCounts.projects} project${incomingCounts.projects === 1 ? "" : "s"}.`;
+
+  const currentSummary = document.createElement("p");
+  currentSummary.className = "panel-note";
+  currentSummary.textContent = `Current map: ${currentCounts.campaigns} campaign${
+    currentCounts.campaigns === 1 ? "" : "s"
+  }, ${currentCounts.projects} project${currentCounts.projects === 1 ? "" : "s"}. Device-specific browser preference will stay unchanged.`;
+
+  const actionsElement = document.createElement("div");
+  actionsElement.className = "panel-actions";
+
+  const cancelButton = document.createElement("button");
+  cancelButton.type = "button";
+  cancelButton.textContent = "Cancel";
+  cancelButton.addEventListener("click", closePanel);
+
+  const replaceButton = document.createElement("button");
+  replaceButton.type = "button";
+  replaceButton.className = "destructive-action";
+  replaceButton.textContent = "Replace Current Map";
+  replaceButton.addEventListener("click", () => {
+    // Import replacement applies normalized state in one atomic state transition.
+    applyState(incomingState);
+    closePanel();
+  });
+
+  actionsElement.append(cancelButton, replaceButton);
+  formElement.append(warningCallout, importSummary, currentSummary, actionsElement);
+}
+
+async function handleImportFileSelection(file) {
+  if (!file) {
+    return;
+  }
+
+  let parsedImport;
+
+  try {
+    parsedImport = parseImportPayload(await file.text());
+  } catch (error) {
+    openInfoPanel("Import Failed", error instanceof Error ? error.message : "Import failed.");
+    return;
+  }
+
+  const normalizedIncomingState = normalizeState(parsedImport.payload.state);
+  openImportConfirmationPanel(file.name, normalizedIncomingState);
+}
+
+function openGoogleSyncPanel() {
+  const formElement = createPanelScaffold("Google Sync");
+  formElement.addEventListener("submit", (event) => event.preventDefault());
+
+  const status = getGoogleSyncStatus();
+  const available = isGoogleSyncAvailable();
+
+  const statusCallout = document.createElement("div");
+  statusCallout.className = "panel-warning";
+
+  const titleElement = document.createElement("h4");
+  titleElement.textContent = available ? "Google Sync Available" : "Google Sync Coming Soon";
+
+  const bodyElement = document.createElement("p");
+  bodyElement.textContent = status.reason;
+
+  statusCallout.append(titleElement, bodyElement);
+
+  const guidance = document.createElement("p");
+  guidance.className = "panel-note";
+  guidance.textContent =
+    "For cross-browser transfer today, export data from one Ops Map instance and import it in the other browser/device.";
+
+  const actionsElement = document.createElement("div");
+  actionsElement.className = "panel-actions";
+
+  const exportButton = document.createElement("button");
+  exportButton.type = "button";
+  exportButton.textContent = "Export Data";
+  exportButton.addEventListener("click", () => {
+    exportStateToFile();
+  });
+
+  const importButton = document.createElement("button");
+  importButton.type = "button";
+  importButton.textContent = "Import Data";
+  importButton.addEventListener("click", () => {
+    closePanel();
+    if (importFileInput) {
+      importFileInput.value = "";
+      importFileInput.click();
+    }
+  });
+
+  const closeButton = document.createElement("button");
+  closeButton.type = "button";
+  closeButton.textContent = "Close";
+  closeButton.addEventListener("click", closePanel);
+
+  actionsElement.append(exportButton, importButton, closeButton);
+  formElement.append(statusCallout, guidance, actionsElement);
 }
 
 function nextCampaignPlacement() {
@@ -866,6 +1053,37 @@ function bindGlobalEvents() {
   addCampaignButton.addEventListener("click", openCampaignEditor);
   addProjectButton.addEventListener("click", () => openProjectEditor());
   emptyStateCreateButton.addEventListener("click", openCampaignEditor);
+
+  if (exportDataButton) {
+    exportDataButton.addEventListener("click", () => {
+      exportStateToFile();
+    });
+  }
+
+  if (importDataButton) {
+    importDataButton.addEventListener("click", () => {
+      if (!importFileInput) {
+        openInfoPanel("Import Unavailable", "The import control is not available in this build.");
+        return;
+      }
+
+      // Resetting value ensures selecting the same file twice still triggers the change event.
+      importFileInput.value = "";
+      importFileInput.click();
+    });
+  }
+
+  if (importFileInput) {
+    importFileInput.addEventListener("change", async () => {
+      const file = importFileInput.files?.[0];
+      await handleImportFileSelection(file);
+      importFileInput.value = "";
+    });
+  }
+
+  if (googleSyncButton) {
+    googleSyncButton.addEventListener("click", openGoogleSyncPanel);
+  }
 
   if (browserTargetSelect) {
     browserTargetSelect.addEventListener("change", async () => {

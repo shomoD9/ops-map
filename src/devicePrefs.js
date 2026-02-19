@@ -24,6 +24,7 @@ function getRuntimeErrorMessage() {
 }
 
 function sanitizeWebBrowserTarget(target) {
+  // We default to current browser for safety if the stored target is unknown.
   return target === WEB_BROWSER_TARGETS.EDGE ? WEB_BROWSER_TARGETS.EDGE : WEB_BROWSER_TARGETS.CURRENT;
 }
 
@@ -38,6 +39,7 @@ function normalizeDevicePrefs(rawPrefs) {
 }
 
 export async function loadDevicePrefs() {
+  // Device preferences intentionally use local storage area so machine-specific routing does not propagate.
   if (hasChromeLocalStorage()) {
     return new Promise((resolve) => {
       chrome.storage.local.get([DEVICE_PREFS_KEY], (result) => {
@@ -91,6 +93,7 @@ export function subscribeToDevicePrefsChanges(onChange) {
         return;
       }
 
+      // This keeps multiple extension tabs on the same machine aligned as prefs change.
       onChange(normalizeDevicePrefs(changes[DEVICE_PREFS_KEY].newValue));
     };
 

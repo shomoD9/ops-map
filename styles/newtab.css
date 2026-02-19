@@ -2,7 +2,8 @@
 This stylesheet defines the visual language of the new-tab map: calm background, soft campaign regions,
 and high-contrast project launch nodes. It is separate from the JavaScript modules so rendering logic stays
 focused on behavior while this file owns atmosphere, spacing, and readability across desktop and laptop sizes.
-It is consumed by `newtab.html` and aligns with DOM classes generated in `src/main.js`.
+It is consumed by `newtab.html` and aligns with DOM classes generated in `src/main.js`,
+including the device routing control and physical-project node states.
 */
 
 :root {
@@ -86,6 +87,7 @@ body {
   gap: 10px;
 }
 
+/* Device-local routing preference is styled as a compact chip to avoid overpowering map actions. */
 .device-pref-control {
   display: flex;
   align-items: center;
@@ -309,6 +311,7 @@ body.is-dragging-campaign {
   box-shadow: 0 10px 18px rgba(21, 47, 80, 0.16);
 }
 
+/* Dot marker distinguishes non-launchable physical nodes at a glance. */
 .project-node.physical::before {
   content: "";
   position: absolute;
@@ -320,6 +323,7 @@ body.is-dragging-campaign {
   background: rgba(35, 62, 93, 0.4);
 }
 
+/* Tooltip is driven by JS data attributes and only appears after a physical-node click. */
 .project-node[data-tip-visible="true"]::after {
   content: attr(data-tip);
   position: absolute;

@@ -2,6 +2,7 @@
 This file holds the domain rules for campaigns, projects, and missions.
 It exists separately so business behavior stays predictable and testable without depending on DOM rendering details.
 `src/main.js` calls these pure functions to mutate state, and `src/layout.js` reads the resulting entities to place them spatially.
+This module also defines project mode semantics so launchable and physical artifacts can share one map model safely.
 */
 
 export const STATE_VERSION = 1;
@@ -95,6 +96,7 @@ function sanitizeLinkType(linkType) {
 }
 
 function sanitizeProjectMode(mode) {
+  // Unknown modes collapse to launchable so older/newer payloads stay operable.
   return PROJECT_MODE_KEYS.includes(mode) ? mode : PROJECT_MODES.LAUNCHABLE;
 }
 
@@ -162,6 +164,7 @@ export function buildLinkFromHelper(linkType, helperInput) {
       return cleaned;
     }
 
+    // Antigravity uses the same file-shaped URI pattern as other editor deep links.
     return `antigravity://file/${cleaned.replace(/^\/+/, "")}`;
   }
 
@@ -420,6 +423,7 @@ export function addProject(state, projectDraft) {
     return state;
   }
 
+  // Physical artifacts intentionally do not require launch links.
   if (mode === PROJECT_MODES.LAUNCHABLE && !link) {
     return state;
   }
@@ -467,6 +471,7 @@ export function updateProject(state, projectId, projectPatch) {
           ? ""
           : normalizeProjectLink(projectPatch?.link ?? project.link, linkType);
 
+      // Launchable projects without a valid link are treated as invalid edits and ignored.
       if (mode === PROJECT_MODES.LAUNCHABLE && !nextLink) {
         return project;
       }

@@ -1,7 +1,8 @@
 <!--
 This file is the single page the browser shows whenever a new tab opens for this extension.
 It exists separately so the map experience has one focused document that can render quickly without route logic.
-It hosts the shared shell elements and hands control to `src/main.js`, which renders campaigns, projects, and editors into this structure.
+It hosts the shared shell elements and hands control to `src/main.js`, which renders campaigns, projects, editors,
+and per-device launch preferences into this structure.
 -->
 <!doctype html>
 <html lang="en">
@@ -19,6 +20,7 @@ It hosts the shared shell elements and hands control to `src/main.js`, which ren
           <p id="state-summary">Loading your campaigns...</p>
         </div>
         <div class="top-actions">
+          <!-- This control is local-per-device and tells runtime how standard web links should open. -->
           <label class="device-pref-control" for="browser-target-select">
             <span>Web opens in</span>
             <select id="browser-target-select">

@@ -3,6 +3,7 @@ This file is the persistence boundary for Ops Map.
 It exists separately so the rest of the app can think in plain state objects while this module hides
 whether data comes from `chrome.storage.sync` or a localStorage fallback during non-extension development.
 It talks outward to browser storage APIs and inward to `src/main.js`, which calls these functions whenever state loads or changes.
+This module only handles shared map state; per-device launch preferences live in `src/devicePrefs.js`.
 */
 
 const STORAGE_KEY = "opsMapStateV1";

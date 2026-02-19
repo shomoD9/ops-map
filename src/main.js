@@ -1,7 +1,8 @@
 /*
 This file is the runtime orchestrator for the new-tab map.
 It exists separately because it coordinates UI rendering, event handling, and persistence calls across the other modules.
-It imports domain rules from `src/model.js`, layout helpers from `src/layout.js`, and storage adapters from `src/storage.js`.
+It imports domain rules from `src/model.js`, layout helpers from `src/layout.js`, sync storage adapters from `src/storage.js`,
+and local device-preference adapters from `src/devicePrefs.js` so browser-launch behavior can vary per machine.
 */
 
 import { ensureCampaignPositions, computeProjectPositions, resolveCampaignRadius } from "./layout.js";
@@ -71,12 +72,14 @@ function sanitizeWebBrowserTarget(target) {
 }
 
 function applyDevicePrefs(nextPrefs) {
+  // Device preferences are always merged with defaults so partial payloads stay safe.
   devicePrefs = {
     ...DEFAULT_DEVICE_PREFS,
     ...(nextPrefs || {}),
     webBrowserTarget: sanitizeWebBrowserTarget(nextPrefs?.webBrowserTarget)
   };
 
+  // The select is the visible source of truth in the header, so we keep it in sync with in-memory prefs.
   if (browserTargetSelect) {
     browserTargetSelect.value = devicePrefs.webBrowserTarget;
   }
@@ -312,6 +315,7 @@ function showProjectTooltip(projectNode, message) {
 }
 
 function openWebLink(link) {
+  // Current browser mode is the lowest-friction default for standard web links.
   if (sanitizeWebBrowserTarget(devicePrefs.webBrowserTarget) === WEB_BROWSER_TARGETS.CURRENT) {
     window.open(link, "_blank", "noopener,noreferrer");
     return;
@@ -480,6 +484,7 @@ function openProjectEditor(options = {}) {
   const refreshProjectModeFields = () => {
     const isLaunchable = projectModeSelect.value === PROJECT_MODES.LAUNCHABLE;
 
+    // Physical projects intentionally hide URI controls to keep the panel semantically clean.
     linkTypeField.hidden = !isLaunchable;
     helperField.hidden = !isLaunchable;
     linkField.hidden = !isLaunchable;
@@ -593,6 +598,7 @@ function flushDragFrame() {
     return;
   }
 
+  // During drag we render from pending position but skip persistence until drag finalization.
   applyState(repositionCampaign(state, dragSession.campaignId, dragSession.pendingPosition), { persist: false });
 }
 
@@ -615,6 +621,7 @@ function finalizeCampaignDrag(pointerId = null) {
   }
 
   if (dragSession.pendingPosition) {
+    // Final drag commit is the only drag write that persists to storage.
     applyState(repositionCampaign(state, dragSession.campaignId, dragSession.pendingPosition));
   }
 
@@ -834,6 +841,7 @@ function renderEmptyState() {
 function render() {
   canvasElement.innerHTML = "";
   const viewport = getViewport();
+  // Radius is recomputed per render so campaign sizing adapts to campaign count and viewport changes.
   const campaignRadius = resolveCampaignRadius(viewport, state.campaigns.length);
 
   state.campaigns.forEach((campaign) => {

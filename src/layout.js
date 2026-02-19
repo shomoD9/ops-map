@@ -2,6 +2,7 @@
 This file translates domain entities into screen positions.
 It exists separately because spatial logic changes for readability reasons and should not be tangled with event handlers.
 `src/main.js` calls these helpers to place campaigns and project nodes, while `src/model.js` stays focused on business rules.
+It now also owns responsive campaign sizing so dense maps stay legible without UI-specific conditionals in the renderer.
 */
 
 const CANVAS_PADDING = 72;
@@ -33,6 +34,7 @@ export function resolveCampaignRadius(viewport, campaignCount = 0) {
   const baseRadius = clamp(minDimension * 0.18, CAMPAIGN_RADIUS_MIN, CAMPAIGN_RADIUS_MAX);
   const crowdingPenalty = Math.max(0, campaignCount - 3) * 7;
 
+  // As campaigns increase, we scale regions down slightly to preserve overlap readability.
   return clamp(baseRadius - crowdingPenalty, CAMPAIGN_RADIUS_MIN, CAMPAIGN_RADIUS_MAX);
 }
 
@@ -83,6 +85,7 @@ export function ensureCampaignPositions(state, viewport) {
   const idealSpacing = bounds.radius * 1.52;
   const idealOrbitRadius = count > 1 ? (idealSpacing * count) / (Math.PI * 2) : 0;
   const minOrbitRadius = count > 1 ? bounds.radius * 0.72 : 0;
+  // Orbit radius aims for even spacing but always yields to viewport constraints.
   const orbitRadius = clampPositive(idealOrbitRadius, minOrbitRadius, maxOrbitRadius);
 
   let didChange = false;

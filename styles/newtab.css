@@ -276,21 +276,14 @@ body.is-sidebar-collapsed .side-head {
   height: 100%;
   min-height: 0;
   display: grid;
-  /* Two columns stay visible (4 cards total), and horizontal scroll reveals the third column (2 cards). */
-  grid-template-rows: repeat(2, minmax(0, 1fr));
-  grid-auto-flow: column;
-  /* Cards are intentionally wider so internal content has breathing room. */
-  grid-auto-columns: calc(((100% - var(--space-6)) / 2) * 1.25);
+  /* The board is locked to exactly two columns, and additional rows scroll downward. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: minmax(260px, 1fr);
   gap: 24px;
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding-right: 2px;
   padding-bottom: 2px;
-  scroll-snap-type: x proximity;
-}
-
-#canvas > * {
-  scroll-snap-align: start;
 }
 
 .campaign-card {
@@ -714,7 +707,7 @@ body.is-sidebar-collapsed .side-head {
 
 @media (max-width: 1320px) {
   #canvas {
-    grid-auto-columns: minmax(520px, calc(((100% - var(--space-5)) / 2) * 1.18));
+    gap: 20px;
   }
 }
 
@@ -747,9 +740,10 @@ body.is-sidebar-collapsed .side-head {
   }
 
   #canvas {
-    grid-auto-columns: minmax(0, calc(100% - 2px));
-    grid-template-rows: repeat(2, minmax(240px, 1fr));
-    overflow-y: hidden;
+    /* Keep two columns even on narrow widths so width behavior stays deterministic. */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: minmax(230px, 1fr);
+    overflow-y: auto;
   }
 
   #panel-root {

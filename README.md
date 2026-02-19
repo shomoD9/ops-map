@@ -19,7 +19,7 @@ The visual system now follows an editorial style: warm paper tones, serif-led hi
 ## Core Interactions
 
 - Click `New Campaign` to create a campaign section (up to six).
-- The board uses a two-row horizontal flow with wider campaign cards; horizontal scrolling reveals additional campaign columns (up to six total).
+- The board is locked to exactly two campaign columns across the tab width, and additional campaign rows are reached by vertical scrolling.
 - Click a campaign title to rename it inline.
 - Edit mission text directly inside each campaign card.
 - Click the `+` beside `Projects` in a campaign card (or `New Project`) to add a project.

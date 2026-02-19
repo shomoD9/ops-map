@@ -1,18 +1,18 @@
 /*
-This file is the runtime orchestrator for the new-tab map.
-It exists separately because it coordinates UI rendering, event handling, and persistence calls across the other modules.
-It imports domain rules from `src/model.js`, layout helpers from `src/layout.js`, sync storage adapters from `src/storage.js`,
-local device-preference adapters from `src/devicePrefs.js`, and transfer/scaffold helpers from `src/transfer.js`
-and `src/googleSync.js` for cross-browser handoff workflows and future cloud sync.
+This file is the runtime coordinator for Ops Map's new-tab board.
+It exists as a separate module because it is the integration layer that connects domain mutations,
+persistence, and DOM rendering into one interactive experience.
+It imports domain rules from `src/model.js`, board-shaping helpers from `src/layout.js`,
+storage adapters from `src/storage.js`, local preference adapters from `src/devicePrefs.js`,
+and transfer/google-sync scaffolding from `src/transfer.js` and `src/googleSync.js`.
 */
 
-import { ensureCampaignPositions, computeProjectPositions, resolveCampaignRadius } from "./layout.js";
+import { buildCampaignSlots, buildProjectsByCampaign, MAX_CAMPAIGN_SLOTS } from "./layout.js";
 import {
   createEmptyState,
   normalizeState,
   addCampaign,
   renameCampaign,
-  repositionCampaign,
   updateCampaignMission,
   deleteCampaign,
   addProject,
@@ -22,8 +22,8 @@ import {
   inferLinkType,
   normalizeProjectLink,
   LINK_TYPE_HELP,
-  DEFAULT_CAMPAIGN_COLORS,
-  PROJECT_MODES
+  PROJECT_MODES,
+  MAX_CAMPAIGNS
 } from "./model.js";
 import { loadState, saveState, subscribeToStateChanges } from "./storage.js";
 import {
@@ -42,42 +42,30 @@ import {
 import { getGoogleSyncStatus, isGoogleSyncAvailable } from "./googleSync.js";
 
 const canvasElement = document.querySelector("#canvas");
+const sideBarElement = document.querySelector("#side-bar");
+const sidebarToggleButton = document.querySelector("#sidebar-toggle");
 const summaryElement = document.querySelector("#state-summary");
 const panelRootElement = document.querySelector("#panel-root");
-const emptyStateElement = document.querySelector("#empty-state");
 const addCampaignButton = document.querySelector("#add-campaign-button");
 const addProjectButton = document.querySelector("#add-project-button");
-const emptyStateCreateButton = document.querySelector("#empty-state-create");
 const browserTargetSelect = document.querySelector("#browser-target-select");
 const exportDataButton = document.querySelector("#export-data-button");
 const importDataButton = document.querySelector("#import-data-button");
 const googleSyncButton = document.querySelector("#google-sync-button");
 const importFileInput = document.querySelector("#import-file-input");
 
-const CAMPAIGN_EDGE_PADDING = 18;
 const PROJECT_TOOLTIP_MS = 1600;
 const SAVE_DEBOUNCE_MS = 220;
+const EDITORIAL_CAMPAIGN_COLOR = "#3f536d";
 
 let state = createEmptyState();
 let devicePrefs = { ...DEFAULT_DEVICE_PREFS };
 let saveTimer = null;
-let dragSession = null;
-let dragFrameId = null;
 let unsubscribeStorage = null;
 let unsubscribeDevicePrefs = null;
+let isSidebarCollapsed = false;
 
 const projectTooltipTimers = new WeakMap();
-
-function getViewport() {
-  return {
-    width: window.innerWidth,
-    height: window.innerHeight
-  };
-}
-
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
-}
 
 function sanitizeWebBrowserTarget(target) {
   return target === WEB_BROWSER_TARGETS.EDGE ? WEB_BROWSER_TARGETS.EDGE : WEB_BROWSER_TARGETS.CURRENT;
@@ -91,56 +79,32 @@ function applyDevicePrefs(nextPrefs) {
     webBrowserTarget: sanitizeWebBrowserTarget(nextPrefs?.webBrowserTarget)
   };
 
-  // The select is the visible source of truth in the header, so we keep it in sync with in-memory prefs.
+  // The sidebar select mirrors the active in-memory preference.
   if (browserTargetSelect) {
     browserTargetSelect.value = devicePrefs.webBrowserTarget;
   }
 }
 
-function clampToBounds(value, min, max) {
-  if (max < min) {
-    return (min + max) / 2;
+function applySidebarCollapsedState(collapsed) {
+  isSidebarCollapsed = Boolean(collapsed);
+  document.body.classList.toggle("is-sidebar-collapsed", isSidebarCollapsed);
+
+  if (sidebarToggleButton) {
+    const label = isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar";
+    sidebarToggleButton.setAttribute("aria-label", label);
+    sidebarToggleButton.setAttribute("title", label);
+    sidebarToggleButton.textContent = isSidebarCollapsed ? ">>" : "<<";
   }
 
-  return clamp(value, min, max);
-}
-
-function clampCampaignPosition(position, campaignCount = state.campaigns.length) {
-  const viewport = getViewport();
-  const campaignRadius = resolveCampaignRadius(viewport, campaignCount);
-
-  return {
-    x: clampToBounds(
-      position.x,
-      campaignRadius + CAMPAIGN_EDGE_PADDING,
-      viewport.width - campaignRadius - CAMPAIGN_EDGE_PADDING
-    ),
-    y: clampToBounds(
-      position.y,
-      campaignRadius + CAMPAIGN_EDGE_PADDING,
-      viewport.height - campaignRadius - CAMPAIGN_EDGE_PADDING
-    )
-  };
-}
-
-function hexToRgba(hexColor, alpha) {
-  const hex = (hexColor || "").replace("#", "");
-  if (![3, 6].includes(hex.length)) {
-    return `rgba(180, 196, 215, ${alpha})`;
+  if (sideBarElement) {
+    sideBarElement.dataset.collapsed = isSidebarCollapsed ? "true" : "false";
   }
-
-  const normalized = hex.length === 3 ? hex.split("").map((part) => `${part}${part}`).join("") : hex;
-  const red = Number.parseInt(normalized.slice(0, 2), 16);
-  const green = Number.parseInt(normalized.slice(2, 4), 16);
-  const blue = Number.parseInt(normalized.slice(4, 6), 16);
-
-  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
 }
 
 function scheduleStateSave() {
   window.clearTimeout(saveTimer);
 
-  // We debounce writes so drag operations feel smooth and still persist reliably.
+  // Debounced writes keep quick inline edits responsive while still persisting safely.
   saveTimer = window.setTimeout(async () => {
     try {
       await saveState(state);
@@ -151,10 +115,9 @@ function scheduleStateSave() {
 }
 
 function applyState(nextState, options = { persist: true }) {
-  const positioned = ensureCampaignPositions(nextState, getViewport());
-  const didChange = positioned !== state;
+  const didChange = nextState !== state;
 
-  state = positioned;
+  state = nextState;
   render();
 
   if (didChange && options.persist) {
@@ -165,6 +128,16 @@ function applyState(nextState, options = { persist: true }) {
 function closePanel() {
   panelRootElement.hidden = true;
   panelRootElement.innerHTML = "";
+}
+
+function openImportPicker() {
+  if (!importFileInput) {
+    openInfoPanel("Import Unavailable", "The import control is not available in this build.");
+    return;
+  }
+
+  importFileInput.value = "";
+  importFileInput.click();
 }
 
 function createPanelScaffold(titleText) {
@@ -238,6 +211,26 @@ function createActionsRow(primaryLabel, onDelete) {
   return actionsElement;
 }
 
+function openInfoPanel(titleText, messageText) {
+  const formElement = createPanelScaffold(titleText);
+  formElement.addEventListener("submit", (event) => event.preventDefault());
+
+  const messageElement = document.createElement("p");
+  messageElement.className = "panel-note";
+  messageElement.textContent = messageText;
+
+  const actionsElement = document.createElement("div");
+  actionsElement.className = "panel-actions";
+
+  const closeButton = document.createElement("button");
+  closeButton.type = "button";
+  closeButton.textContent = "Close";
+  closeButton.addEventListener("click", closePanel);
+
+  actionsElement.append(closeButton);
+  formElement.append(messageElement, actionsElement);
+}
+
 function getStateEntityCounts(targetState) {
   return {
     campaigns: Array.isArray(targetState?.campaigns) ? targetState.campaigns.length : 0,
@@ -257,26 +250,6 @@ function triggerJsonDownload(fileName, content) {
 
   // Releasing the object URL avoids leaking transient in-memory blob URLs.
   window.setTimeout(() => window.URL.revokeObjectURL(url), 0);
-}
-
-function openInfoPanel(titleText, messageText) {
-  const formElement = createPanelScaffold(titleText);
-  formElement.addEventListener("submit", (event) => event.preventDefault());
-
-  const messageElement = document.createElement("p");
-  messageElement.className = "panel-note";
-  messageElement.textContent = messageText;
-
-  const actionsElement = document.createElement("div");
-  actionsElement.className = "panel-actions";
-
-  const closeButton = document.createElement("button");
-  closeButton.type = "button";
-  closeButton.textContent = "Close";
-  closeButton.addEventListener("click", closePanel);
-
-  actionsElement.append(closeButton);
-  formElement.append(messageElement, actionsElement);
 }
 
 function exportStateToFile() {
@@ -304,7 +277,7 @@ function openImportConfirmationPanel(importSourceLabel, incomingState) {
 
   const warningBody = document.createElement("p");
   warningBody.textContent =
-    "Campaigns, projects, missions, and layout positions from the import file will overwrite your current Ops Map data.";
+    "Campaigns, projects, missions, and layout data from the import file will overwrite your current Ops Map data.";
 
   warningCallout.append(warningTitle, warningBody);
 
@@ -333,7 +306,7 @@ function openImportConfirmationPanel(importSourceLabel, incomingState) {
   replaceButton.className = "destructive-action";
   replaceButton.textContent = "Replace Current Map";
   replaceButton.addEventListener("click", () => {
-    // Import replacement applies normalized state in one atomic state transition.
+    // Import replacement applies normalized state in one atomic transition.
     applyState(incomingState);
     closePanel();
   });
@@ -398,10 +371,7 @@ function openGoogleSyncPanel() {
   importButton.textContent = "Import Data";
   importButton.addEventListener("click", () => {
     closePanel();
-    if (importFileInput) {
-      importFileInput.value = "";
-      importFileInput.click();
-    }
+    openImportPicker();
   });
 
   const closeButton = document.createElement("button");
@@ -413,29 +383,12 @@ function openGoogleSyncPanel() {
   formElement.append(statusCallout, guidance, actionsElement);
 }
 
-function nextCampaignPlacement() {
-  const viewport = getViewport();
-  const totalCampaigns = state.campaigns.length + 1;
-  const placementIndex = totalCampaigns - 1;
-  const angle = -Math.PI / 2 + (2 * Math.PI * placementIndex) / Math.max(3, totalCampaigns);
-  const campaignRadius = resolveCampaignRadius(viewport, totalCampaigns);
-  const idealSpacing = campaignRadius * 1.52;
-  const idealOrbitRadius = totalCampaigns > 1 ? (idealSpacing * totalCampaigns) / (Math.PI * 2) : 0;
-  const minOrbitRadius = totalCampaigns > 1 ? campaignRadius * 0.72 : 0;
-  const maxOrbitRadius = Math.max(0, Math.min(viewport.width, viewport.height) * 0.34);
-  const orbitRadius =
-    maxOrbitRadius < minOrbitRadius ? maxOrbitRadius : clamp(idealOrbitRadius, minOrbitRadius, maxOrbitRadius);
-
-  return clampCampaignPosition(
-    {
-      x: viewport.width / 2 + Math.cos(angle) * orbitRadius,
-      y: viewport.height / 2 + 18 + Math.sin(angle) * orbitRadius
-    },
-    totalCampaigns
-  );
-}
-
 function openCampaignEditor() {
+  if (state.campaigns.length >= MAX_CAMPAIGNS) {
+    openInfoPanel("Campaign Limit Reached", `Ops Map currently supports up to ${MAX_CAMPAIGNS} campaigns.`);
+    return;
+  }
+
   const formElement = createPanelScaffold("Create Campaign");
 
   const nameInput = document.createElement("input");
@@ -444,33 +397,22 @@ function openCampaignEditor() {
   nameInput.required = true;
   nameInput.autofocus = true;
 
-  const colorInput = document.createElement("input");
-  colorInput.type = "color";
-  colorInput.value = DEFAULT_CAMPAIGN_COLORS[state.campaigns.length % DEFAULT_CAMPAIGN_COLORS.length];
-
   const errorElement = document.createElement("p");
   errorElement.className = "panel-error";
 
-  formElement.append(
-    createField("Name", nameInput),
-    createField("Color", colorInput, "This color helps separate regions when campaigns overlap."),
-    errorElement,
-    createActionsRow("Create Campaign")
-  );
+  formElement.append(createField("Name", nameInput), errorElement, createActionsRow("Create Campaign"));
 
   formElement.addEventListener("submit", (event) => {
     event.preventDefault();
 
-    const placement = nextCampaignPlacement();
     const nextState = addCampaign(state, {
       name: nameInput.value,
-      color: colorInput.value,
-      x: placement.x,
-      y: placement.y
+      // Color remains in data for backward compatibility, but the UI now uses one editorial accent.
+      color: EDITORIAL_CAMPAIGN_COLOR
     });
 
     if (nextState === state) {
-      errorElement.textContent = "A campaign needs a name.";
+      errorElement.textContent = "A campaign needs a name, and the board supports up to six campaigns.";
       return;
     }
 
@@ -522,14 +464,14 @@ function openWebLink(link) {
 
 function launchProject(project, projectNode) {
   if (project.mode === PROJECT_MODES.PHYSICAL) {
-    showProjectTooltip(projectNode, "Physical artifact — no link");
+    showProjectTooltip(projectNode, "Physical artifact - no link");
     return;
   }
 
   const link = (project.link || "").trim();
 
   if (!link) {
-    // Missing links are edited inline rather than throwing runtime errors.
+    // Missing links are corrected via the project editor instead of failing silently.
     openProjectEditor({ projectId: project.id });
     return;
   }
@@ -718,7 +660,7 @@ function openProjectEditor(options = {}) {
 
   formElement.append(
     createField("Name", nameInput),
-    createField("Project Mode", projectModeSelect, "Physical artifacts stay on the map but do not launch links."),
+    createField("Project Mode", projectModeSelect, "Physical artifacts stay on the board but do not launch links."),
     linkTypeField,
     helperField,
     linkField,
@@ -778,148 +720,101 @@ function openProjectEditor(options = {}) {
   });
 }
 
-function flushDragFrame() {
-  dragFrameId = null;
-
-  if (!dragSession?.pendingPosition) {
-    return;
-  }
-
-  // During drag we render from pending position but skip persistence until drag finalization.
-  applyState(repositionCampaign(state, dragSession.campaignId, dragSession.pendingPosition), { persist: false });
-}
-
-function scheduleDragFrame() {
-  if (dragFrameId !== null) {
-    return;
-  }
-
-  dragFrameId = window.requestAnimationFrame(flushDragFrame);
-}
-
-function finalizeCampaignDrag(pointerId = null) {
-  if (!dragSession || (pointerId !== null && dragSession.pointerId !== pointerId)) {
-    return;
-  }
-
-  if (dragFrameId !== null) {
-    window.cancelAnimationFrame(dragFrameId);
-    dragFrameId = null;
-  }
-
-  if (dragSession.pendingPosition) {
-    // Final drag commit is the only drag write that persists to storage.
-    applyState(repositionCampaign(state, dragSession.campaignId, dragSession.pendingPosition));
-  }
-
-  document.body.classList.remove("is-dragging-campaign");
-  dragSession = null;
-}
-
-function startCampaignDrag(event, campaign, regionElement) {
-  const interactiveTarget = event.target.closest("button,[contenteditable='true'],input,textarea,select,label");
-  if (interactiveTarget) {
-    return;
-  }
-
-  const origin = clampCampaignPosition({ x: campaign.x, y: campaign.y });
-
-  // Dragging starts from the region body so repositioning feels direct and spatial.
-  dragSession = {
-    campaignId: campaign.id,
-    pointerId: event.pointerId,
-    offsetX: event.clientX - origin.x,
-    offsetY: event.clientY - origin.y,
-    pendingPosition: origin
-  };
-
-  try {
-    regionElement.setPointerCapture(event.pointerId);
-  } catch (error) {
-    // Pointer capture can fail on rapid re-renders; window-level handlers still keep drag usable.
-  }
-
-  document.body.classList.add("is-dragging-campaign");
-  event.preventDefault();
-}
-
-function handlePointerMove(event) {
-  if (!dragSession || dragSession.pointerId !== event.pointerId) {
-    return;
-  }
-
-  const position = clampCampaignPosition({
-    x: event.clientX - dragSession.offsetX,
-    y: event.clientY - dragSession.offsetY
-  });
-
-  if (
-    dragSession.pendingPosition &&
-    position.x === dragSession.pendingPosition.x &&
-    position.y === dragSession.pendingPosition.y
-  ) {
-    return;
-  }
-
-  dragSession.pendingPosition = position;
-  scheduleDragFrame();
-}
-
-function handlePointerUp(event) {
-  finalizeCampaignDrag(event.pointerId);
-}
-
 function applyMissionEditorPlaceholder(missionEditor, missionValue) {
   const mission = (missionValue || "").trim();
   missionEditor.textContent = mission;
   missionEditor.dataset.empty = mission ? "false" : "true";
 }
 
-function renderCampaign(campaign, campaignRadius) {
-  const region = document.createElement("article");
-  region.className = "campaign-region";
-  region.style.left = `${campaign.x}px`;
-  region.style.top = `${campaign.y}px`;
-  region.style.setProperty("--campaign-size-runtime", `${campaignRadius * 2}px`);
-  region.style.background = `radial-gradient(circle at 30% 24%, ${hexToRgba(campaign.color, 0.78)} 0, ${hexToRgba(
-    campaign.color,
-    0.4
-  )} 100%)`;
+function buildProjectEditGlyph() {
+  const namespace = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(namespace, "svg");
+  svg.classList.add("project-edit-glyph");
+  svg.setAttribute("viewBox", "0 0 16 16");
+  svg.setAttribute("aria-hidden", "true");
+
+  // A simple pencil mark keeps the affordance compact without introducing noisy label text.
+  const path = document.createElementNS(namespace, "path");
+  path.setAttribute("d", "M3 11.5L11.6 2.9a1.3 1.3 0 011.8 0l.7.7a1.3 1.3 0 010 1.8L5.5 14H3z");
+
+  const line = document.createElementNS(namespace, "path");
+  line.setAttribute("d", "M9.9 4.6l1.5 1.5");
+
+  svg.append(path, line);
+
+  return svg;
+}
+
+function renderProjectRow(project) {
+  const row = document.createElement("div");
+  row.className = "campaign-project-row";
+
+  const launchButton = document.createElement("button");
+  launchButton.type = "button";
+  launchButton.className = `project-launch${project.mode === PROJECT_MODES.PHYSICAL ? " is-physical" : ""}`;
+  launchButton.textContent = project.name;
+  launchButton.title =
+    project.mode === PROJECT_MODES.PHYSICAL
+      ? `${project.name}\nPhysical artifact (no link)`
+      : `${project.name}\n${project.link || "No link set"}`;
+
+  launchButton.addEventListener("click", () => {
+    launchProject(project, launchButton);
+  });
+
+  // Right-click remains a direct edit shortcut for power users.
+  launchButton.addEventListener("contextmenu", (event) => {
+    event.preventDefault();
+    openProjectEditor({ projectId: project.id });
+  });
+
+  const editButton = document.createElement("button");
+  editButton.type = "button";
+  editButton.className = "project-edit-icon";
+  editButton.setAttribute("aria-label", `Edit project ${project.name}`);
+  editButton.title = `Edit ${project.name}`;
+  editButton.append(buildProjectEditGlyph());
+  editButton.addEventListener("click", () => {
+    openProjectEditor({ projectId: project.id });
+  });
+
+  row.append(launchButton, editButton);
+
+  return row;
+}
+
+function renderCampaignCard(campaign, projects) {
+  const article = document.createElement("article");
+  article.className = "campaign-card";
 
   const header = document.createElement("div");
-  header.className = "campaign-header";
+  header.className = "campaign-card-header";
 
-  const campaignName = document.createElement("div");
-  campaignName.className = "campaign-name";
-  campaignName.contentEditable = "true";
-  campaignName.spellcheck = false;
-  campaignName.textContent = campaign.name;
+  const title = document.createElement("h2");
+  title.className = "campaign-title";
+  title.contentEditable = "true";
+  title.spellcheck = false;
+  title.textContent = campaign.name;
+  title.title = campaign.name;
 
-  campaignName.addEventListener("keydown", (event) => {
+  title.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
       event.preventDefault();
-      campaignName.blur();
+      title.blur();
     }
   });
 
-  campaignName.addEventListener("blur", () => {
-    applyState(renameCampaign(state, campaign.id, campaignName.textContent));
+  title.addEventListener("blur", () => {
+    applyState(renameCampaign(state, campaign.id, title.textContent));
+    title.title = title.textContent.trim();
   });
 
-  const actions = document.createElement("div");
-  actions.className = "campaign-meta-actions";
-
-  const projectCreateButton = document.createElement("button");
-  projectCreateButton.className = "project-create";
-  projectCreateButton.type = "button";
-  projectCreateButton.textContent = "+ Project";
-  projectCreateButton.addEventListener("click", () => {
-    openProjectEditor({ seedCampaignId: campaign.id });
-  });
+  const headerActions = document.createElement("div");
+  headerActions.className = "campaign-header-actions";
 
   const deleteButton = document.createElement("button");
-  deleteButton.className = "campaign-delete";
   deleteButton.type = "button";
+  deleteButton.className = "campaign-delete";
   deleteButton.textContent = "Delete";
   deleteButton.addEventListener("click", () => {
     const confirmed = window.confirm(`Delete campaign "${campaign.name}"?`);
@@ -930,20 +825,20 @@ function renderCampaign(campaign, campaignRadius) {
     applyState(deleteCampaign(state, campaign.id));
   });
 
-  actions.append(projectCreateButton, deleteButton);
-  header.append(campaignName, actions);
+  headerActions.append(deleteButton);
+  header.append(title, headerActions);
 
-  const missionBlock = document.createElement("div");
-  missionBlock.className = "mission-block";
-
-  const missionLabel = document.createElement("p");
-  missionLabel.className = "mission-label";
-  missionLabel.textContent = "Current Mission";
+  const missionSection = document.createElement("section");
+  missionSection.className = "mission-block";
+  missionSection.title = "Current mission. Click to edit.";
 
   const missionEditor = document.createElement("div");
   missionEditor.className = "mission-editor";
   missionEditor.contentEditable = "true";
   missionEditor.spellcheck = true;
+  // We keep the mission affordance lightweight and rely on tooltip text for context.
+  missionEditor.title = "Current mission. Click to edit.";
+  missionEditor.setAttribute("aria-label", `Current mission for ${campaign.name}`);
   applyMissionEditorPlaceholder(missionEditor, campaign.currentMission);
 
   missionEditor.addEventListener("input", () => {
@@ -962,7 +857,7 @@ function renderCampaign(campaign, campaignRadius) {
     applyState(updateCampaignMission(state, campaign.id, missionEditor.textContent));
   });
 
-  missionBlock.append(missionLabel, missionEditor);
+  missionSection.append(missionEditor);
 
   if (campaign.previousMission) {
     const previousMission = document.createElement("p");
@@ -972,43 +867,73 @@ function renderCampaign(campaign, campaignRadius) {
     prefix.textContent = "Previous: ";
 
     previousMission.append(prefix, campaign.previousMission);
-    missionBlock.append(previousMission);
+    missionSection.append(previousMission);
   }
 
-  region.append(header, missionBlock);
+  const projectsSection = document.createElement("section");
+  projectsSection.className = "projects-block";
 
-  if (dragSession?.campaignId === campaign.id) {
-    region.classList.add("dragging");
+  const projectsHeader = document.createElement("div");
+  projectsHeader.className = "projects-header";
+
+  const projectsLabel = document.createElement("p");
+  projectsLabel.className = "projects-label";
+  projectsLabel.textContent = "Projects";
+
+  const addProjectInlineButton = document.createElement("button");
+  addProjectInlineButton.type = "button";
+  addProjectInlineButton.className = "projects-add-icon";
+  addProjectInlineButton.textContent = "+";
+  addProjectInlineButton.setAttribute("aria-label", `Add project to ${campaign.name}`);
+  addProjectInlineButton.title = `Add project to ${campaign.name}`;
+  addProjectInlineButton.addEventListener("click", () => {
+    openProjectEditor({ seedCampaignId: campaign.id });
+  });
+
+  projectsHeader.append(projectsLabel, addProjectInlineButton);
+
+  const projectsList = document.createElement("div");
+  projectsList.className = "projects-list";
+
+  if (projects.length === 0) {
+    const emptyProjects = document.createElement("p");
+    emptyProjects.className = "projects-empty";
+    emptyProjects.textContent = "No projects in this campaign yet.";
+    projectsList.append(emptyProjects);
+  } else {
+    projects.forEach((project) => {
+      projectsList.append(renderProjectRow(project));
+    });
   }
 
-  region.addEventListener("pointerdown", (event) => startCampaignDrag(event, campaign, region));
+  projectsSection.append(projectsHeader, projectsList);
 
-  return region;
+  article.append(header, missionSection, projectsSection);
+  return article;
 }
 
-function renderProject(project, position) {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = `project-node${project.mode === PROJECT_MODES.PHYSICAL ? " physical" : ""}`;
-  button.style.left = `${position.x}px`;
-  button.style.top = `${position.y}px`;
-  button.textContent = project.name;
-  button.title =
-    project.mode === PROJECT_MODES.PHYSICAL
-      ? `${project.name}\nPhysical artifact (no link)\nRight-click to edit`
-      : `${project.name}\n${project.link || "No link set"}\nClick to launch, right-click to edit`;
+function renderEmptySlot(slotIndex) {
+  const article = document.createElement("article");
+  article.className = "campaign-card campaign-slot-empty";
 
-  button.addEventListener("click", () => {
-    launchProject(project, button);
+  const title = document.createElement("h2");
+  title.className = "empty-slot-title";
+  title.textContent = `Campaign Slot ${slotIndex + 1}`;
+
+  const body = document.createElement("p");
+  body.className = "empty-slot-body";
+  body.textContent = "Create a campaign to use this section.";
+
+  const createButton = document.createElement("button");
+  createButton.type = "button";
+  createButton.className = "empty-slot-create";
+  createButton.textContent = "Create Campaign";
+  createButton.addEventListener("click", () => {
+    openCampaignEditor();
   });
 
-  // Right-click opens direct editing without sacrificing one-click launch behavior.
-  button.addEventListener("contextmenu", (event) => {
-    event.preventDefault();
-    openProjectEditor({ projectId: project.id });
-  });
-
-  return button;
+  article.append(title, body, createButton);
+  return article;
 }
 
 function renderSummary() {
@@ -1021,38 +946,51 @@ function renderSummary() {
   } · ${missionCount} active mission${missionCount === 1 ? "" : "s"}`;
 }
 
-function renderEmptyState() {
-  emptyStateElement.hidden = state.campaigns.length > 0;
+function syncSidebarActionStates() {
+  const atCampaignLimit = state.campaigns.length >= MAX_CAMPAIGNS;
+
+  if (addCampaignButton) {
+    addCampaignButton.disabled = atCampaignLimit;
+    addCampaignButton.title = atCampaignLimit
+      ? `Campaign limit reached (${MAX_CAMPAIGNS}).`
+      : "Create a new campaign";
+  }
+
+  if (addProjectButton) {
+    addProjectButton.disabled = state.campaigns.length === 0;
+    addProjectButton.title = state.campaigns.length === 0 ? "Create a campaign first" : "Create a new project";
+  }
 }
 
 function render() {
   canvasElement.innerHTML = "";
-  const viewport = getViewport();
-  // Radius is recomputed per render so campaign sizing adapts to campaign count and viewport changes.
-  const campaignRadius = resolveCampaignRadius(viewport, state.campaigns.length);
 
-  state.campaigns.forEach((campaign) => {
-    canvasElement.append(renderCampaign(campaign, campaignRadius));
-  });
+  const slots = buildCampaignSlots(state, MAX_CAMPAIGN_SLOTS);
+  const projectsByCampaign = buildProjectsByCampaign(state, MAX_CAMPAIGN_SLOTS);
 
-  const projectPositions = computeProjectPositions(state, viewport);
-
-  state.projects.forEach((project) => {
-    const position = projectPositions.get(project.id);
-
-    if (position) {
-      canvasElement.append(renderProject(project, position));
+  // Rendering all six slots keeps the board calm and predictable at every campaign count.
+  slots.forEach((slot) => {
+    if (!slot.campaign) {
+      canvasElement.append(renderEmptySlot(slot.slotIndex));
+      return;
     }
+
+    const projects = projectsByCampaign.get(slot.campaign.id) || [];
+    canvasElement.append(renderCampaignCard(slot.campaign, projects));
   });
 
   renderSummary();
-  renderEmptyState();
+  syncSidebarActionStates();
 }
 
 function bindGlobalEvents() {
-  addCampaignButton.addEventListener("click", openCampaignEditor);
+  addCampaignButton.addEventListener("click", () => openCampaignEditor());
   addProjectButton.addEventListener("click", () => openProjectEditor());
-  emptyStateCreateButton.addEventListener("click", openCampaignEditor);
+
+  sidebarToggleButton?.addEventListener("click", () => {
+    // Sidebar collapse is purely presentational; board data remains unchanged.
+    applySidebarCollapsedState(!isSidebarCollapsed);
+  });
 
   if (exportDataButton) {
     exportDataButton.addEventListener("click", () => {
@@ -1062,14 +1000,7 @@ function bindGlobalEvents() {
 
   if (importDataButton) {
     importDataButton.addEventListener("click", () => {
-      if (!importFileInput) {
-        openInfoPanel("Import Unavailable", "The import control is not available in this build.");
-        return;
-      }
-
-      // Resetting value ensures selecting the same file twice still triggers the change event.
-      importFileInput.value = "";
-      importFileInput.click();
+      openImportPicker();
     });
   }
 
@@ -1102,29 +1033,21 @@ function bindGlobalEvents() {
     });
   }
 
-  window.addEventListener("pointermove", handlePointerMove);
-  window.addEventListener("pointerup", handlePointerUp);
-  window.addEventListener("pointercancel", handlePointerUp);
-  window.addEventListener("blur", () => finalizeCampaignDrag());
-
   window.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       closePanel();
     }
   });
-
-  window.addEventListener("resize", () => {
-    // Resize can push nodes off-screen, so we run layout normalization and persist if needed.
-    applyState(state);
-  });
 }
 
 async function initialize() {
   const [loadedState, loadedDevicePrefs] = await Promise.all([loadState(), loadDevicePrefs()]);
+
+  applySidebarCollapsedState(false);
   applyDevicePrefs(loadedDevicePrefs || DEFAULT_DEVICE_PREFS);
   bindGlobalEvents();
 
-  applyState(normalizeState(loadedState || createEmptyState()));
+  applyState(normalizeState(loadedState || createEmptyState()), { persist: false });
 
   // Storage subscription keeps multiple Chrome windows in sync without manual refresh.
   unsubscribeStorage = subscribeToStateChanges((incomingState) => {

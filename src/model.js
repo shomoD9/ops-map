@@ -54,6 +54,7 @@ export const PROJECT_MODES = {
   LAUNCHABLE: "launchable",
   PHYSICAL: "physical"
 };
+export const MAX_CAMPAIGNS = 6;
 
 const PROJECT_MODE_KEYS = Object.values(PROJECT_MODES);
 const LINK_TYPE_KEYS = Object.keys(LINK_TYPE_HELP);
@@ -215,7 +216,7 @@ export function normalizeState(rawState) {
     return createEmptyState();
   }
 
-  const campaigns = Array.isArray(rawState.campaigns)
+  const campaigns = (Array.isArray(rawState.campaigns)
     ? rawState.campaigns
         .map((campaign, index) => {
           if (!campaign || typeof campaign !== "object") {
@@ -236,7 +237,8 @@ export function normalizeState(rawState) {
           };
         })
         .filter(Boolean)
-    : [];
+    : []
+  ).slice(0, MAX_CAMPAIGNS);
 
   const campaignIds = new Set(campaigns.map((campaign) => campaign.id));
 
@@ -277,6 +279,11 @@ export function normalizeState(rawState) {
 }
 
 export function addCampaign(state, campaignDraft) {
+  // The board layout is intentionally fixed to six campaign sections.
+  if (state.campaigns.length >= MAX_CAMPAIGNS) {
+    return state;
+  }
+
   const name = cleanText(campaignDraft?.name);
   if (!name) {
     return state;
@@ -316,6 +323,29 @@ export function renameCampaign(state, campaignId, nextName) {
     return {
       ...campaign,
       name
+    };
+  });
+
+  return didChange ? withUpdatedStamp({ ...state, campaigns }) : state;
+}
+
+export function updateCampaignColor(state, campaignId, nextColor) {
+  let didChange = false;
+
+  const campaigns = state.campaigns.map((campaign, index) => {
+    if (campaign.id !== campaignId) {
+      return campaign;
+    }
+
+    const normalizedColor = sanitizeColor(nextColor, index);
+    if (normalizedColor === campaign.color) {
+      return campaign;
+    }
+
+    didChange = true;
+    return {
+      ...campaign,
+      color: normalizedColor
     };
   });
 

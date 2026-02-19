@@ -1,9 +1,9 @@
 <!--
-This file is the single page the browser shows whenever a new tab opens for this extension.
-It exists separately so the map experience has one focused document that can render quickly without route logic.
-It hosts the shared shell elements and hands control to `src/main.js`, which renders campaigns, projects, editors,
-and per-device launch preferences into this structure.
-It also provides transfer controls for export/import and a Google Sync scaffold entry for future cloud sync.
+This file is the one-document shell for the Ops Map new-tab experience.
+It exists as a separate file so the browser can load one stable structure quickly while `src/main.js`
+renders live campaign data into it.
+It provides the collapsible sidebar controls, the fixed campaign board container, and the lightweight
+panel root for create/edit/import/export workflows.
 -->
 <!doctype html>
 <html lang="en">
@@ -15,13 +15,30 @@ It also provides transfer controls for export/import and a Google Sync scaffold 
   </head>
   <body>
     <div id="app-shell">
-      <header class="top-bar">
-        <div class="brand-block">
-          <h1>Ops Map</h1>
-          <p id="state-summary">Loading your campaigns...</p>
+      <aside id="side-bar" class="side-bar" aria-label="Ops Map controls">
+        <div class="side-head">
+          <button
+            id="sidebar-toggle"
+            class="sidebar-toggle"
+            type="button"
+            aria-label="Collapse sidebar"
+            title="Collapse sidebar"
+          >
+            <<
+          </button>
+          <div class="brand-block">
+            <h1>Ops Map</h1>
+            <p id="state-summary">Loading your campaigns...</p>
+          </div>
         </div>
-        <div class="top-actions">
-          <!-- This control is local-per-device and tells runtime how standard web links should open. -->
+
+        <div class="side-section primary-actions">
+          <button id="add-campaign-button" type="button">New Campaign</button>
+          <button id="add-project-button" type="button">New Project</button>
+        </div>
+
+        <div class="side-section secondary-actions">
+          <!-- This setting remains device-local and controls how regular web links are opened. -->
           <label class="device-pref-control" for="browser-target-select">
             <span>Web opens in</span>
             <select id="browser-target-select">
@@ -32,21 +49,13 @@ It also provides transfer controls for export/import and a Google Sync scaffold 
           <button id="export-data-button" type="button">Export Data</button>
           <button id="import-data-button" type="button">Import Data</button>
           <button id="google-sync-button" type="button">Google Sync</button>
-          <button id="add-campaign-button" type="button">New Campaign</button>
-          <button id="add-project-button" type="button">New Project</button>
         </div>
-      </header>
+      </aside>
 
-      <main id="canvas" aria-label="Campaign map canvas"></main>
-
-      <section id="empty-state" hidden>
-        <h2>Your map is empty</h2>
-        <p>Create your first campaign, then add projects and missions directly on the canvas.</p>
-        <button id="empty-state-create" type="button">Create First Campaign</button>
-      </section>
+      <main id="canvas" aria-label="Campaign board"></main>
 
       <section id="panel-root" hidden aria-live="polite"></section>
-      <!-- Hidden input keeps import native and lightweight without a persistent visible form field. -->
+      <!-- Hidden file input keeps import flow native and avoids cluttering the interface. -->
       <input id="import-file-input" type="file" accept=".json,application/json" hidden />
     </div>
 

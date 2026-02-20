@@ -39,6 +39,7 @@ and collapse to monochrome symbols for fast repeat usage.
   --space-6: 28px;
   --space-7: 30px;
   --space-8: 8px;
+  --campaign-card-min-width: 300px;
 
   --sidebar-open-width: 204px;
   --sidebar-closed-width: 54px;
@@ -343,9 +344,11 @@ body.is-sidebar-collapsed .sidebar-toggle {
   height: 100%;
   min-height: 0;
   display: grid;
-  /* The board is locked to exactly two columns, and additional rows scroll downward. */
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-auto-rows: minmax(200px, auto);
+  /* Two columns remain fixed, but each card now keeps a width floor before text becomes too cramped. */
+  grid-template-columns: repeat(2, minmax(var(--campaign-card-min-width), 1fr));
+  /* Rows size from content, while each card keeps its own baseline min-height floor. */
+  grid-auto-rows: auto;
+  align-items: start;
   gap: 24px;
   overflow-x: hidden;
   overflow-y: auto;
@@ -363,7 +366,11 @@ body.is-sidebar-collapsed .sidebar-toggle {
   display: flex;
   flex-direction: column;
   gap: 7px;
-  min-height: 0;
+  /* The card keeps a baseline size but is allowed to grow vertically with project volume. */
+  min-height: 200px;
+  /* Explicit content-sized height prevents grid stretch behavior from hiding overflow growth. */
+  height: max-content;
+  align-self: start;
   /* Mission menus are allowed to extend outside card flow without clipping. */
   overflow: visible;
 }
@@ -538,7 +545,6 @@ body.is-sidebar-collapsed .sidebar-toggle {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  min-height: 0;
   /* Keep project content anchored toward the top rather than vertically centered in tall cards. */
   flex: 0 0 auto;
 }
@@ -583,13 +589,14 @@ body.is-sidebar-collapsed .sidebar-toggle {
 .projects-list {
   min-height: 56px;
   flex: 0 0 auto;
-  overflow-y: auto;
+  /* We intentionally avoid internal scrolling so the campaign card grows with project volume. */
+  overflow-y: visible;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
   align-content: start;
-  padding-right: 2px;
-  max-height: 112px;
+  padding-right: 0;
+  max-height: none;
 }
 
 .projects-empty {
@@ -906,6 +913,7 @@ body.is-sidebar-collapsed .sidebar-toggle {
 @media (max-width: 980px) {
   :root {
     --sidebar-open-width: 190px;
+    --campaign-card-min-width: 250px;
   }
 
   #app-shell {
@@ -929,11 +937,12 @@ body.is-sidebar-collapsed .sidebar-toggle {
 @media (max-width: 760px) {
   :root {
     --sidebar-open-width: 170px;
+    --campaign-card-min-width: 180px;
   }
 
   #canvas {
-    /* Keep two columns even on narrow widths so width behavior stays deterministic. */
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    /* Keep two columns on narrow widths while allowing cards to respect their reduced minimum width. */
+    grid-template-columns: repeat(2, minmax(var(--campaign-card-min-width), 1fr));
     grid-auto-rows: minmax(190px, auto);
     overflow-y: auto;
   }

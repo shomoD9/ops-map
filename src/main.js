@@ -43,7 +43,7 @@ import {
   parseImportPayload,
   suggestExportFileName
 } from "./transfer.js";
-import { getGoogleSyncStatus, isGoogleSyncAvailable } from "./googleSync.js";
+import { getGoogleSyncStatus, isGoogleSyncAvailable, getGoogleSyncDiagnostics } from "./googleSync.js";
 
 const canvasElement = document.querySelector("#canvas");
 const sideBarElement = document.querySelector("#side-bar");
@@ -376,6 +376,7 @@ function openGoogleSyncPanel() {
 
   const status = getGoogleSyncStatus();
   const available = isGoogleSyncAvailable();
+  const diagnostics = getGoogleSyncDiagnostics();
 
   const statusCallout = document.createElement("div");
   statusCallout.className = "panel-warning";
@@ -392,6 +393,27 @@ function openGoogleSyncPanel() {
   guidance.className = "panel-note";
   guidance.textContent =
     "For cross-browser transfer today, export data from one Ops Map instance and import it in the other browser/device.";
+
+  const diagnosticsTitle = document.createElement("p");
+  diagnosticsTitle.className = "panel-note";
+  diagnosticsTitle.textContent = "Sync diagnostics (this device):";
+
+  // These values make the two most common sync blockers visible without opening DevTools.
+  const diagnosticsLines = [
+    `Extension ID: ${diagnostics.extensionId}`,
+    `State backend: ${diagnostics.storageBackend}`,
+    `Cross-browser cloud sync: ${diagnostics.crossBrowserCloudSync}`
+  ];
+
+  const diagnosticsBody = document.createElement("p");
+  diagnosticsBody.className = "panel-note";
+  diagnosticsBody.textContent = diagnosticsLines.join("\n");
+  diagnosticsBody.style.whiteSpace = "pre-line";
+
+  const syncHint = document.createElement("p");
+  syncHint.className = "panel-note";
+  syncHint.textContent =
+    "If two devices show different extension IDs, they will not share chrome.storage.sync data even under the same Google profile.";
 
   const actionsElement = document.createElement("div");
   actionsElement.className = "panel-actions";
@@ -417,7 +439,7 @@ function openGoogleSyncPanel() {
   closeButton.addEventListener("click", closePanel);
 
   actionsElement.append(exportButton, importButton, closeButton);
-  formElement.append(statusCallout, guidance, actionsElement);
+  formElement.append(statusCallout, guidance, diagnosticsTitle, diagnosticsBody, syncHint, actionsElement);
 }
 
 function openCampaignEditor() {

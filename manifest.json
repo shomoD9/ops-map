@@ -3,6 +3,7 @@
   "name": "Ops Map",
   "description": "A new-tab campaign map for fast context resumption.",
   "version": "1.0.0",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAy7xWhTg97AwY7vLDfm6EZwDBL5GYIFcjCyBVOMFArmWT6VhayPSECOSIvuxLAMKl6ByZ6J7GrYn4YrYesll62qDt3rG2bYpH+XHSLSGTf165scInxARx96eN7yfFVnuKmF9jxjpZwUhdFO4jOo6yuPYoAWzVMPtVGyt1o8zy0YOMR7LRDbYs72vbt68lVOtDi/OMYsOHUlWhW5g0d80CrL6Evtwu7KRlTyIpoBjCl8Q5XUD5kVmRErD5RhzZSh4Odd+lLyWGfX9v+yDN0XABZCY835gAEiJY9obPxuKz4PXXxJ4pXD7nljNB98JOoWfBXnjBcZbKiEVPjb4RN8TxpQIDAQAB",
   "permissions": ["storage"],
   "chrome_url_overrides": {
     "newtab": "newtab.html"

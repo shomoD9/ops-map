@@ -2,63 +2,23 @@
 This stylesheet defines Ops Map's editorial design system.
 It exists separately from behavior code so typography, spacing, and visual hierarchy can evolve
 without changing domain logic in JavaScript.
-It styles the shell in `newtab.html` and class hooks emitted by `src/main.js`, with a warm paper palette,
-a single accent tone, and restrained component treatment.
+It styles the shell in `newtab.html` and class hooks emitted by `src/main.js`, now using a monochrome
+off-white/black palette, Garamond typography, and hand-drawn-like campaign borders.
 */
 
-@font-face {
-  font-family: "Ops Serif";
-  src: url("./fonts/Newsreader-Variable.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Ops Serif";
-  src: url("./fonts/Newsreader-Bold.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Ops Sans";
-  src: url("./fonts/IBMPlexSans-Regular.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Ops Sans";
-  src: url("./fonts/IBMPlexSans-Medium.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Ops Sans";
-  src: url("./fonts/IBMPlexSans-SemiBold.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-}
-
 :root {
-  --font-heading: "Ops Serif", "Newsreader", "Iowan Old Style", "Source Serif Pro", Georgia, serif;
-  --font-body: "Ops Sans", "IBM Plex Sans", "Inter", "Avenir Next", sans-serif;
+  --font-heading: "Garamond", "EB Garamond", "Adobe Garamond Pro", "Times New Roman", serif;
+  --font-body: "Garamond", "EB Garamond", "Adobe Garamond Pro", "Times New Roman", serif;
 
-  --color-paper: #faf8f5;
-  --color-paper-alt: #f3eee7;
-  --color-surface: #f7f2eb;
-  --color-ink: #2f2b27;
-  --color-ink-muted: #5e5650;
-  --color-accent: #3f536d;
-  --color-accent-soft: #e3e8ee;
-  --color-line: #d8cfc4;
-  --color-line-strong: #c9bdae;
+  --color-paper: #f8f8f6;
+  --color-paper-alt: #f3f3f1;
+  --color-surface: #f6f6f4;
+  --color-ink: #121212;
+  --color-ink-muted: #303030;
+  --color-accent: #111111;
+  --color-accent-soft: #ececea;
+  --color-line: #161616;
+  --color-line-strong: #111111;
 
   --radius-s: 4px;
   --radius-m: 6px;
@@ -75,7 +35,7 @@ a single accent tone, and restrained component treatment.
 
   --sidebar-open-width: 236px;
   --sidebar-closed-width: 60px;
-  --focus-ring: 2px solid rgba(63, 83, 109, 0.42);
+  --focus-ring: 2px solid rgba(0, 0, 0, 0.48);
 }
 
 * {
@@ -205,12 +165,12 @@ button {
 }
 
 button:hover:not(:disabled) {
-  background: rgba(63, 83, 109, 0.07);
-  border-color: rgba(63, 83, 109, 0.4);
+  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 0, 0, 0.56);
 }
 
 button:active:not(:disabled) {
-  background: rgba(63, 83, 109, 0.1);
+  background: rgba(0, 0, 0, 0.1);
 }
 
 button:disabled {
@@ -287,8 +247,9 @@ body.is-sidebar-collapsed .side-head {
 }
 
 .campaign-card {
+  position: relative;
   border-radius: var(--radius-l);
-  border: 3px solid #141210;
+  border: none;
   background: var(--color-surface);
   /* Slightly tighter top padding lifts content upward within each card. */
   padding: 12px 20px 14px;
@@ -296,6 +257,32 @@ body.is-sidebar-collapsed .side-head {
   flex-direction: column;
   gap: 8px;
   min-height: 0;
+}
+
+/* We layer two slightly offset strokes so campaign cards read as hand-drawn outlines. */
+.campaign-card::before,
+.campaign-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--color-line-strong);
+  border-radius: var(--radius-l);
+  pointer-events: none;
+}
+
+.campaign-card::before {
+  transform: translate(0.8px, -0.6px) rotate(-0.23deg);
+}
+
+.campaign-card::after {
+  inset: 1px;
+  transform: translate(-0.7px, 0.7px) rotate(0.2deg);
+  opacity: 0.92;
+}
+
+.campaign-card > * {
+  position: relative;
+  z-index: 1;
 }
 
 .campaign-card-header {
@@ -362,7 +349,7 @@ body.is-sidebar-collapsed .side-head {
 }
 
 .mission-editor:focus {
-  background: rgba(63, 83, 109, 0.08);
+  background: rgba(0, 0, 0, 0.08);
 }
 
 .mission-editor[data-empty="true"]::before {
@@ -412,9 +399,9 @@ body.is-sidebar-collapsed .side-head {
   min-width: 18px;
   height: 18px;
   padding: 0;
-  border-color: #1f1c18;
+  border-color: var(--color-line-strong);
   color: var(--color-accent);
-  background: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.48);
   font-size: 0.8rem;
   font-weight: 600;
   line-height: 1;
@@ -492,14 +479,14 @@ body.is-sidebar-collapsed .side-head {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-color: rgba(63, 83, 109, 0.3);
+  border-color: rgba(0, 0, 0, 0.36);
   color: var(--color-accent);
-  background: rgba(250, 248, 245, 0.74);
+  background: rgba(255, 255, 255, 0.76);
 }
 
 .project-edit-icon:hover:not(:disabled) {
-  background: rgba(63, 83, 109, 0.12);
-  border-color: rgba(63, 83, 109, 0.42);
+  background: rgba(0, 0, 0, 0.12);
+  border-color: rgba(0, 0, 0, 0.5);
 }
 
 .project-edit-glyph {
@@ -513,8 +500,7 @@ body.is-sidebar-collapsed .side-head {
 }
 
 .campaign-slot-empty {
-  border-style: dashed;
-  border-color: #1f1c18;
+  border-style: none;
   background: rgba(255, 255, 255, 0.3);
   justify-content: center;
   align-items: flex-start;
@@ -661,7 +647,7 @@ body.is-sidebar-collapsed .side-head {
 .panel-error {
   min-height: 18px;
   margin: 6px 0 0;
-  color: #8b3a3a;
+  color: #1d1d1d;
   font-size: 0.84rem;
   line-height: 1.45;
 }
@@ -676,33 +662,33 @@ body.is-sidebar-collapsed .side-head {
 .panel-warning {
   margin: 10px 0;
   border-radius: var(--radius-m);
-  border: 1px solid rgba(121, 82, 82, 0.35);
-  background: rgba(159, 94, 94, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.44);
+  background: rgba(0, 0, 0, 0.05);
   padding: 10px 12px;
 }
 
 .panel-warning h4 {
   margin: 0;
-  color: #6d3f3f;
+  color: #1c1c1c;
   font-size: 0.9rem;
   line-height: 1.35;
 }
 
 .panel-warning p {
   margin: 7px 0 0;
-  color: #6d3f3f;
+  color: #222222;
   font-size: 0.84rem;
   line-height: 1.45;
 }
 
 .destructive-action {
-  border-color: rgba(139, 58, 58, 0.45);
-  color: #7f3131;
-  background: rgba(139, 58, 58, 0.07);
+  border-color: rgba(0, 0, 0, 0.6);
+  color: #111111;
+  background: rgba(0, 0, 0, 0.07);
 }
 
 .destructive-action:hover {
-  background: rgba(139, 58, 58, 0.12);
+  background: rgba(0, 0, 0, 0.14);
 }
 
 @media (max-width: 1320px) {

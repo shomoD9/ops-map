@@ -5,7 +5,7 @@ Ops Map is a Manifest V3 browser extension that replaces the default new-tab pag
 The current interface intentionally abandons free-form spatial mapping in favor of a fixed six-slot board. This shift is not cosmetic; it changes the system contract. The board now assumes a maximum of six campaigns, and each campaign occupies a deterministic section. By constraining placement, the runtime eliminates overlap failure modes and keeps reading order stable even when projects belong to multiple campaigns.
 
 Persistence remains local-first with synchronized extension storage where available. Shared map data is saved in `chrome.storage.sync`, while machine-specific behavior such as link launch target remains local to each installation. Cross-browser continuity is handled through explicit export/import, and a separate Google Sync module exists as a scaffold for future cloud-backed synchronization.
-The current presentation layer also adopts a typographic editorial direction: warm paper-like surfaces, restrained component framing, and one shared aged-navy accent. This ensures visual calm comes from composition and type hierarchy rather than decorative effects.
+The current presentation layer adopts a typographic editorial direction with a monochrome palette: off-white surfaces, black ink tones, Garamond-led typography, and hand-drawn-style campaign outlines. This keeps the UI visually quiet while still giving container boundaries a human, sketched character.
 
 # Ontology
 
@@ -19,7 +19,7 @@ A third entity type is the device preference record. This stores local behavior 
 
 At the root, `manifest.json` declares extension metadata, permissions, and the new-tab override. The page shell lives in `newtab.html`. That shell defines a collapsible left sidebar for global controls, a main board container with six uniform campaign slots rendered by JavaScript, an inline panel root for create/edit/import/export workflows, and a hidden file input used for JSON imports.
 
-Visual structure is implemented in `styles/newtab.css`. The stylesheet establishes spacing tokens, sidebar behavior, board grid geometry, campaign card hierarchy, project row rhythm, and panel styling. It intentionally encodes uniform section behavior so rendering remains clean under dense text and mixed project membership. The same file also defines collapsed-sidebar behavior and responsive rules that preserve card readability on narrower widths. Self-hosted type assets are stored in `styles/fonts/`, and the stylesheet binds them via `@font-face` so heading and body typography stay consistent without network dependencies.
+Visual structure is implemented in `styles/newtab.css`. The stylesheet establishes spacing tokens, sidebar behavior, board grid geometry, campaign card hierarchy, project row rhythm, and panel styling. It intentionally encodes uniform section behavior so rendering remains clean under dense text and mixed project membership. The same file also defines collapsed-sidebar behavior and responsive rules that preserve card readability on narrower widths.
 
 Runtime behavior is coordinated in `src/main.js`. This module initializes state and preferences, wires user interactions, renders the six-slot board, handles inline edits, opens project and campaign forms, and drives import/export/google-sync scaffold panels. It also owns persistence timing through debounced saves and storage subscriptions so multiple windows remain consistent.
 

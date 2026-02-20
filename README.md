@@ -7,7 +7,7 @@ A Chrome extension that replaces the new tab page with a structured six-section 
 V1 is implemented as a Manifest V3 extension with inline campaign and mission editing, per-campaign project lists, physical project support, per-device web launch routing, and manual cross-browser transfer via export/import.
 
 The board now uses a fixed maximum of six campaign sections. This removes overlap-driven visualization complexity and keeps layout readability stable.
-The visual system now follows an editorial style: warm paper tones, serif-led hierarchy, restrained controls, and one shared accent tone.
+The visual system now follows a monochrome editorial style: off-white paper tones, Garamond typography, restrained controls, and hand-drawn-style campaign borders.
 
 ## Load In Chrome
 

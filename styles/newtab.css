@@ -59,7 +59,7 @@ body {
 body {
   font-family: var(--font-body);
   font-weight: 400;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.65;
   color: var(--color-ink);
   background: var(--color-paper);
@@ -135,7 +135,7 @@ body.is-sidebar-collapsed #app-shell {
   background: transparent;
   color: var(--color-accent);
   font-family: var(--font-body);
-  font-size: 0.78rem;
+  font-size: 0.84rem;
   font-weight: 600;
   line-height: 1;
   cursor: pointer;
@@ -164,7 +164,7 @@ body.is-sidebar-collapsed #app-shell {
 .brand-block p {
   margin: 0;
   color: var(--color-ink-muted);
-  font-size: 0.72rem;
+  font-size: 0.8rem;
   line-height: 1.35;
 }
 
@@ -198,7 +198,7 @@ button {
   background: transparent;
   color: var(--color-ink);
   font-family: var(--font-body);
-  font-size: 0.9rem;
+  font-size: 0.94rem;
   font-weight: 600;
   line-height: 1.4;
   padding: 7px 10px;
@@ -218,7 +218,7 @@ button {
   align-items: center;
   gap: 8px;
   text-align: left;
-  font-size: 0.78rem;
+  font-size: 0.9rem;
   font-weight: 600;
   line-height: 1.25;
   color: var(--color-ink);
@@ -256,11 +256,11 @@ button {
 }
 
 .side-action-icon {
-  width: 16px;
-  min-width: 16px;
+  width: 18px;
+  min-width: 18px;
   text-align: center;
   color: var(--color-accent);
-  font-size: 0.92rem;
+  font-size: 1.06rem;
   line-height: 1;
 }
 
@@ -330,7 +330,7 @@ body.is-sidebar-collapsed .side-action-label {
 body.is-sidebar-collapsed .side-action-icon {
   width: auto;
   min-width: auto;
-  font-size: 1rem;
+  font-size: 1.1rem;
 }
 
 body.is-sidebar-collapsed .sidebar-toggle {
@@ -364,6 +364,8 @@ body.is-sidebar-collapsed .sidebar-toggle {
   flex-direction: column;
   gap: 7px;
   min-height: 0;
+  /* Mission menus are allowed to extend outside card flow without clipping. */
+  overflow: visible;
 }
 
 /* We layer two slightly offset strokes so campaign cards read as hand-drawn outlines. */
@@ -432,11 +434,11 @@ body.is-sidebar-collapsed .sidebar-toggle {
 }
 
 .mission-menu-trigger {
-  width: 28px;
-  min-width: 28px;
-  height: 24px;
+  width: 30px;
+  min-width: 30px;
+  height: 26px;
   padding: 0;
-  font-size: 0.84rem;
+  font-size: 0.92rem;
   font-weight: 600;
   line-height: 1;
   letter-spacing: 0.04em;
@@ -453,7 +455,8 @@ body.is-sidebar-collapsed .sidebar-toggle {
   display: none;
   flex-direction: column;
   gap: 0;
-  z-index: 20;
+  z-index: 60;
+  pointer-events: auto;
 }
 
 .mission-menu[data-open="true"] {
@@ -465,9 +468,9 @@ body.is-sidebar-collapsed .sidebar-toggle {
   border-radius: 0;
   border-bottom: 1px solid rgba(0, 0, 0, 0.14);
   text-align: left;
-  font-size: 0.78rem;
+  font-size: 0.88rem;
   font-weight: 500;
-  padding: 6px 9px;
+  padding: 7px 10px;
 }
 
 .mission-menu button:last-child {
@@ -475,8 +478,8 @@ body.is-sidebar-collapsed .sidebar-toggle {
 }
 
 .campaign-delete {
-  font-size: 0.8rem;
-  padding: 4px 9px;
+  font-size: 0.9rem;
+  padding: 5px 10px;
 }
 
 .mission-block {
@@ -496,7 +499,7 @@ body.is-sidebar-collapsed .sidebar-toggle {
   background: rgba(0, 0, 0, 0.07);
   outline: none;
   font-family: var(--font-body);
-  font-size: 0.88rem;
+  font-size: 0.96rem;
   line-height: 1.42;
   color: var(--color-ink);
   user-select: text;
@@ -522,7 +525,7 @@ body.is-sidebar-collapsed .sidebar-toggle {
   margin: 0;
   padding-left: 9px;
   border-left: 2px solid rgba(0, 0, 0, 0.16);
-  font-size: 0.8rem;
+  font-size: 0.88rem;
   color: var(--color-ink-muted);
   line-height: 1.45;
 }
@@ -551,21 +554,21 @@ body.is-sidebar-collapsed .sidebar-toggle {
   margin: 0;
   color: var(--color-accent);
   font-family: var(--font-body);
-  font-size: 0.68rem;
+  font-size: 0.78rem;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .projects-add-icon {
-  width: 18px;
-  min-width: 18px;
-  height: 18px;
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
   padding: 0;
   border: 0;
   color: var(--color-accent);
   background: transparent;
-  font-size: 0.8rem;
+  font-size: 0.92rem;
   font-weight: 600;
   line-height: 1;
   border-radius: var(--radius-s);
@@ -593,7 +596,7 @@ body.is-sidebar-collapsed .sidebar-toggle {
   margin: 0;
   grid-column: 1 / -1;
   color: var(--color-ink-muted);
-  font-size: 0.92rem;
+  font-size: 1rem;
   line-height: 1.55;
 }
 
@@ -608,12 +611,12 @@ body.is-sidebar-collapsed .sidebar-toggle {
   width: 100%;
   border: 0;
   padding-right: 34px;
-  padding-top: 4px;
-  padding-bottom: 4px;
+  padding-top: 5px;
+  padding-bottom: 5px;
   text-align: left;
-  font-size: 0.84rem;
+  font-size: 0.95rem;
   font-weight: 500;
-  line-height: 1.35;
+  line-height: 1.4;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -659,7 +662,7 @@ body.is-sidebar-collapsed .sidebar-toggle {
   border-radius: var(--radius-s);
   background: var(--color-accent);
   color: var(--color-paper);
-  font-size: 0.72rem;
+  font-size: 0.8rem;
   font-weight: 500;
   line-height: 1.2;
   white-space: nowrap;
@@ -671,11 +674,11 @@ body.is-sidebar-collapsed .sidebar-toggle {
 .project-edit-icon {
   position: absolute;
   top: 50%;
-  right: 7px;
+  right: 8px;
   transform: translateY(-50%);
-  width: 18px;
-  min-width: 18px;
-  height: 18px;
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
   border: 0;
   padding: 0;
   display: inline-flex;
@@ -693,8 +696,8 @@ body.is-sidebar-collapsed .sidebar-toggle {
 }
 
 .project-edit-glyph {
-  width: 10px;
-  height: 10px;
+  width: 11px;
+  height: 11px;
   stroke: currentColor;
   fill: none;
   stroke-width: 1.4;
@@ -721,7 +724,7 @@ body.is-sidebar-collapsed .sidebar-toggle {
 .empty-slot-body {
   margin: 0;
   color: var(--color-ink-muted);
-  font-size: 0.9rem;
+  font-size: 0.98rem;
   line-height: 1.6;
 }
 
@@ -763,7 +766,7 @@ body.is-sidebar-collapsed .sidebar-toggle {
 }
 
 .panel-close {
-  font-size: 0.84rem;
+  font-size: 0.9rem;
   padding: 6px 9px;
 }
 
@@ -776,7 +779,7 @@ body.is-sidebar-collapsed .sidebar-toggle {
 
 .panel-field label {
   color: var(--color-ink-muted);
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.07em;
@@ -790,7 +793,7 @@ body.is-sidebar-collapsed .sidebar-toggle {
   border-radius: var(--radius-s);
   padding: 8px 10px;
   font-family: var(--font-body);
-  font-size: 0.88rem;
+  font-size: 0.92rem;
   line-height: 1.5;
   color: var(--color-ink);
   background: rgba(255, 255, 255, 0.5);
@@ -851,14 +854,14 @@ body.is-sidebar-collapsed .sidebar-toggle {
   min-height: 18px;
   margin: 6px 0 0;
   color: #1d1d1d;
-  font-size: 0.84rem;
+  font-size: 0.88rem;
   line-height: 1.45;
 }
 
 .panel-note {
   margin: 10px 0;
   color: var(--color-ink-muted);
-  font-size: 0.82rem;
+  font-size: 0.88rem;
   line-height: 1.55;
 }
 
@@ -873,14 +876,14 @@ body.is-sidebar-collapsed .sidebar-toggle {
 .panel-warning h4 {
   margin: 0;
   color: #1c1c1c;
-  font-size: 0.9rem;
+  font-size: 0.94rem;
   line-height: 1.35;
 }
 
 .panel-warning p {
   margin: 7px 0 0;
   color: #222222;
-  font-size: 0.84rem;
+  font-size: 0.88rem;
   line-height: 1.45;
 }
 

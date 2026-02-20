@@ -873,6 +873,11 @@ function renderCampaignCard(campaign, projects) {
   missionMenu.setAttribute("role", "menu");
   missionMenu.setAttribute("aria-label", `Mission actions for ${campaign.name}`);
 
+  const readMissionDraft = () => {
+    const draftEditor = article.querySelector(".mission-editor");
+    return draftEditor ? draftEditor.textContent : campaign.currentMission;
+  };
+
   const markDoneButton = document.createElement("button");
   markDoneButton.type = "button";
   markDoneButton.textContent = "Mark Mission Done";
@@ -880,7 +885,8 @@ function renderCampaignCard(campaign, projects) {
   markDoneButton.disabled = !campaign.currentMission;
   markDoneButton.addEventListener("click", () => {
     // Mission history only rolls forward when the user explicitly marks completion.
-    applyState(completeCampaignMission(state, campaign.id));
+    const stateWithLatestMission = updateCampaignMission(state, campaign.id, readMissionDraft());
+    applyState(completeCampaignMission(stateWithLatestMission, campaign.id));
     closeMissionMenus();
   });
 
@@ -890,12 +896,19 @@ function renderCampaignCard(campaign, projects) {
   clearHistoryButton.setAttribute("role", "menuitem");
   clearHistoryButton.disabled = !campaign.previousMission;
   clearHistoryButton.addEventListener("click", () => {
-    applyState(clearCampaignMissionHistory(state, campaign.id));
+    const stateWithLatestMission = updateCampaignMission(state, campaign.id, readMissionDraft());
+    applyState(clearCampaignMissionHistory(stateWithLatestMission, campaign.id));
     closeMissionMenus();
   });
 
   missionMenu.append(markDoneButton, clearHistoryButton);
   missionMenuWrap.append(missionMenuTrigger, missionMenu);
+
+  missionMenuTrigger.addEventListener("pointerdown", (event) => {
+    // Prevent focus handoff from mission editor to trigger so blur-save re-render never swallows menu clicks.
+    event.preventDefault();
+    event.stopPropagation();
+  });
 
   missionMenuTrigger.addEventListener("click", (event) => {
     event.preventDefault();
@@ -903,6 +916,12 @@ function renderCampaignCard(campaign, projects) {
     const shouldOpen = missionMenu.dataset.open !== "true";
     closeMissionMenus();
     setMissionMenuOpenState(missionMenu, missionMenuTrigger, shouldOpen);
+  });
+
+  missionMenu.addEventListener("pointerdown", (event) => {
+    // Keeping pointer interaction local avoids outside-closer races while choosing a mission action.
+    event.preventDefault();
+    event.stopPropagation();
   });
 
   missionMenu.addEventListener("click", (event) => {
@@ -950,7 +969,14 @@ function renderCampaignCard(campaign, projects) {
     }
   });
 
-  missionEditor.addEventListener("blur", () => {
+  missionEditor.addEventListener("blur", (event) => {
+    const nextFocus = event.relatedTarget instanceof Element ? event.relatedTarget : null;
+
+    // Moving focus into the mission menu should not trigger an intermediate re-render.
+    if (nextFocus?.closest(".mission-menu-wrap")) {
+      return;
+    }
+
     applyState(updateCampaignMission(state, campaign.id, missionEditor.textContent));
   });
 
@@ -1161,7 +1187,8 @@ function bindGlobalEvents() {
 async function initialize() {
   const [loadedState, loadedDevicePrefs] = await Promise.all([loadState(), loadDevicePrefs()]);
 
-  applySidebarCollapsedState(false);
+  // Sidebar defaults to collapsed so the board owns first visual focus on every new tab.
+  applySidebarCollapsedState(true);
   applyDevicePrefs(loadedDevicePrefs || DEFAULT_DEVICE_PREFS);
   bindGlobalEvents();
 

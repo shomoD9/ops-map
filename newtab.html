@@ -4,6 +4,8 @@ It exists as a separate file so the browser can load one stable structure quickl
 renders live campaign data into it.
 It provides the collapsible sidebar controls, the fixed campaign board container, and the lightweight
 panel root for create/edit/import/export workflows.
+The sidebar presents every core action in one stack so power users can work in one click, then collapses
+to icon-only mode for fast muscle-memory interaction.
 -->
 <!doctype html>
 <html lang="en">
@@ -33,22 +35,34 @@ panel root for create/edit/import/export workflows.
         </div>
 
         <div class="side-section primary-actions">
-          <button id="add-campaign-button" type="button">New Campaign</button>
-          <button id="add-project-button" type="button">New Project</button>
+          <button id="add-campaign-button" class="side-action" type="button" title="Create a new campaign">
+            <span class="side-action-icon" aria-hidden="true">✢</span>
+            <span class="side-action-label">New Campaign</span>
+          </button>
+          <button id="add-project-button" class="side-action" type="button" title="Create a new project">
+            <span class="side-action-icon" aria-hidden="true">＋</span>
+            <span class="side-action-label">New Project</span>
+          </button>
         </div>
 
         <div class="side-section secondary-actions">
-          <!-- This setting remains device-local and controls how regular web links are opened. -->
-          <label class="device-pref-control" for="browser-target-select">
-            <span>Web opens in</span>
-            <select id="browser-target-select">
-              <option value="current">Current Browser</option>
-              <option value="edge">Edge (best effort)</option>
-            </select>
-          </label>
-          <button id="export-data-button" type="button">Export Data</button>
-          <button id="import-data-button" type="button">Import Data</button>
-          <button id="google-sync-button" type="button">Google Sync</button>
+          <!-- Web launch target is a local preference, so we expose it as a quick toggle action. -->
+          <button id="browser-target-button" class="side-action" type="button" title="Toggle web launch target">
+            <span class="side-action-icon" aria-hidden="true">⌁</span>
+            <span id="browser-target-label" class="side-action-label">Web: Current Browser</span>
+          </button>
+          <button id="export-data-button" class="side-action" type="button" title="Export map data">
+            <span class="side-action-icon" aria-hidden="true">↗</span>
+            <span class="side-action-label">Export Data</span>
+          </button>
+          <button id="import-data-button" class="side-action" type="button" title="Import map data">
+            <span class="side-action-icon" aria-hidden="true">↙</span>
+            <span class="side-action-label">Import Data</span>
+          </button>
+          <button id="google-sync-button" class="side-action" type="button" title="Open Google Sync status">
+            <span class="side-action-icon" aria-hidden="true">◎</span>
+            <span class="side-action-label">Google Sync</span>
+          </button>
         </div>
       </aside>
 

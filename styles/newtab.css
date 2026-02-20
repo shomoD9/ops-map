@@ -4,6 +4,8 @@ It exists separately from behavior code so typography, spacing, and visual hiera
 without changing domain logic in JavaScript.
 It styles the shell in `newtab.html` and class hooks emitted by `src/main.js`, now using a monochrome
 off-white/black palette, Garamond typography, and hand-drawn-like campaign borders.
+The sidebar uses a matching sketch-frame treatment with icon-forward actions that stay readable when expanded
+and collapse to monochrome symbols for fast repeat usage.
 */
 
 :root {
@@ -19,6 +21,11 @@ off-white/black palette, Garamond typography, and hand-drawn-like campaign borde
   --color-accent-soft: #ececea;
   --color-line: #161616;
   --color-line-strong: #111111;
+  --color-line-soft: rgba(0, 0, 0, 0.3);
+  --color-action-highlight: rgba(138, 123, 84, 0.2);
+  --color-action-highlight-strong: rgba(138, 123, 84, 0.3);
+  --color-project-highlight: rgba(201, 175, 110, 0.24);
+  --color-project-highlight-strong: rgba(201, 175, 110, 0.33);
 
   --radius-s: 4px;
   --radius-m: 6px;
@@ -33,8 +40,8 @@ off-white/black palette, Garamond typography, and hand-drawn-like campaign borde
   --space-7: 30px;
   --space-8: 8px;
 
-  --sidebar-open-width: 236px;
-  --sidebar-closed-width: 60px;
+  --sidebar-open-width: 204px;
+  --sidebar-closed-width: 54px;
   --focus-ring: 2px solid rgba(0, 0, 0, 0.48);
 }
 
@@ -76,36 +83,67 @@ body.is-sidebar-collapsed #app-shell {
 
 /* Sidebar behaves like a quiet page margin rather than a control console. */
 .side-bar {
+  position: relative;
   height: 100%;
   border-radius: var(--radius-l);
-  border: 1px solid var(--color-line);
-  background: var(--color-paper-alt);
-  padding: var(--space-3);
+  border: none;
+  background: #f5f5f3;
+  padding: 10px 10px 9px;
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: 8px;
   overflow: hidden;
+}
+
+.side-bar::before,
+.side-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1.6px solid var(--color-line-strong);
+  border-radius: var(--radius-l);
+  pointer-events: none;
+}
+
+.side-bar::before {
+  transform: translate(0.65px, -0.5px) rotate(-0.22deg);
+}
+
+.side-bar::after {
+  inset: 1px;
+  transform: translate(-0.55px, 0.6px) rotate(0.19deg);
+  opacity: 0.9;
+}
+
+.side-bar > * {
+  position: relative;
+  z-index: 1;
 }
 
 .side-head {
   display: flex;
   align-items: flex-start;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
 .sidebar-toggle {
-  width: 34px;
-  min-width: 34px;
-  height: 34px;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
   border-radius: var(--radius-s);
-  border: 1px solid var(--color-line-strong);
+  border: 0;
   background: transparent;
   color: var(--color-accent);
   font-family: var(--font-body);
-  font-size: 0.88rem;
+  font-size: 0.78rem;
   font-weight: 600;
   line-height: 1;
   cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.sidebar-toggle:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.08);
 }
 
 .brand-block {
@@ -117,31 +155,41 @@ body.is-sidebar-collapsed #app-shell {
 .brand-block h1 {
   margin: 0;
   font-family: var(--font-heading);
-  font-size: 1.45rem;
+  font-size: 1.15rem;
   font-weight: 700;
-  line-height: 1.08;
+  line-height: 1.05;
   color: var(--color-accent);
 }
 
 .brand-block p {
   margin: 0;
   color: var(--color-ink-muted);
-  font-size: 0.82rem;
-  line-height: 1.5;
+  font-size: 0.72rem;
+  line-height: 1.35;
 }
 
 .side-section {
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-m);
-  background: rgba(255, 255, 255, 0.34);
-  padding: 8px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 2px;
 }
 
+.primary-actions {
+  /* Group boundaries are separators, not nested boxes, to keep the column visually calm. */
+  margin-top: 2px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-line-soft);
+}
+
+/* Secondary actions remain one-click visible instead of hiding behind overflow controls. */
 .secondary-actions {
-  margin-top: auto;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-line-soft);
 }
 
 button {
@@ -158,10 +206,72 @@ button {
   transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
 }
 
-/* Sidebar controls intentionally use a tighter scale than board controls. */
-.side-bar button {
-  font-size: 0.82rem;
-  padding: 6px 8px;
+/* Sidebar controls intentionally avoid boxed chrome and rely on text + highlight rhythm. */
+.side-action {
+  position: relative;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 6px 3px;
+  border-radius: var(--radius-s);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--color-ink);
+  transition: transform 120ms ease;
+}
+
+.side-action::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 52%;
+  height: 70%;
+  transform: translateY(-50%) rotate(-0.18deg);
+  border-radius: 3px;
+  background: var(--color-action-highlight);
+  opacity: 0;
+  transition: opacity 120ms ease, background-color 120ms ease;
+  pointer-events: none;
+}
+
+.side-action:hover::before,
+.side-action:focus-visible::before {
+  opacity: 1;
+}
+
+.side-action:active {
+  transform: translateY(0.5px);
+}
+
+.side-action-icon,
+.side-action-label {
+  position: relative;
+  z-index: 1;
+}
+
+.side-action-icon {
+  width: 16px;
+  min-width: 16px;
+  text-align: center;
+  color: var(--color-accent);
+  font-size: 0.92rem;
+  line-height: 1;
+}
+
+.side-action-label {
+  white-space: nowrap;
+}
+
+.side-action:hover:not(:disabled),
+.side-action:active:not(:disabled) {
+  background: transparent;
+  border-color: transparent;
 }
 
 button:hover:not(:disabled) {
@@ -187,48 +297,45 @@ input:focus-visible,
 }
 
 .device-pref-control {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-s);
-  background: rgba(255, 255, 255, 0.3);
-  padding: 6px 8px;
-}
-
-.device-pref-control span {
-  color: var(--color-ink-muted);
-  font-size: 0.66rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.device-pref-control select {
-  width: 100%;
-  border: 1px solid var(--color-line-strong);
-  border-radius: var(--radius-s);
-  padding: 6px 7px;
-  font-family: var(--font-body);
-  font-size: 0.78rem;
-  font-weight: 500;
-  color: var(--color-ink);
-  background: rgba(255, 255, 255, 0.56);
+  display: none;
 }
 
 body.is-sidebar-collapsed .side-bar {
-  padding: var(--space-2);
-  align-items: center;
+  padding: 8px 6px 7px;
+  align-items: stretch;
 }
 
-body.is-sidebar-collapsed .brand-block,
-body.is-sidebar-collapsed .side-section {
+body.is-sidebar-collapsed .brand-block {
   display: none;
 }
 
 body.is-sidebar-collapsed .side-head {
   width: 100%;
   justify-content: center;
+}
+
+body.is-sidebar-collapsed .side-section {
+  width: 100%;
+}
+
+body.is-sidebar-collapsed .side-action {
+  justify-content: center;
+  padding: 7px 0;
+}
+
+body.is-sidebar-collapsed .side-action-label {
+  display: none;
+}
+
+body.is-sidebar-collapsed .side-action-icon {
+  width: auto;
+  min-width: auto;
+  font-size: 1rem;
+}
+
+body.is-sidebar-collapsed .sidebar-toggle {
+  border: 0;
+  background: transparent;
 }
 
 /* The board remains a six-section composition with generous page-like gutters. */
@@ -238,7 +345,7 @@ body.is-sidebar-collapsed .side-head {
   display: grid;
   /* The board is locked to exactly two columns, and additional rows scroll downward. */
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-auto-rows: minmax(260px, 1fr);
+  grid-auto-rows: minmax(200px, auto);
   gap: 24px;
   overflow-x: hidden;
   overflow-y: auto;
@@ -251,11 +358,11 @@ body.is-sidebar-collapsed .side-head {
   border-radius: var(--radius-l);
   border: none;
   background: var(--color-surface);
-  /* Slightly tighter top padding lifts content upward within each card. */
-  padding: 12px 20px 14px;
+  /* Content-adaptive cards use tighter vertical framing to reduce dead space. */
+  padding: 10px 18px 11px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 7px;
   min-height: 0;
 }
 
@@ -320,36 +427,90 @@ body.is-sidebar-collapsed .side-head {
   gap: var(--space-2);
 }
 
+.mission-menu-wrap {
+  position: relative;
+}
+
+.mission-menu-trigger {
+  width: 28px;
+  min-width: 28px;
+  height: 24px;
+  padding: 0;
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.04em;
+}
+
+.mission-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 166px;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--color-line-strong);
+  background: var(--color-paper);
+  display: none;
+  flex-direction: column;
+  gap: 0;
+  z-index: 20;
+}
+
+.mission-menu[data-open="true"] {
+  display: flex;
+}
+
+.mission-menu button {
+  border: 0;
+  border-radius: 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.14);
+  text-align: left;
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 6px 9px;
+}
+
+.mission-menu button:last-child {
+  border-bottom: 0;
+}
+
 .campaign-delete {
   font-size: 0.8rem;
   padding: 4px 9px;
 }
 
 .mission-block {
-  border-radius: var(--radius-m);
-  border: 1px solid var(--color-line);
-  background: rgba(255, 255, 255, 0.35);
-  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 0;
 }
 
 .mission-editor {
-  margin-top: 0;
-  min-height: 34px;
-  max-height: 56px;
+  min-height: 30px;
+  max-height: 52px;
   overflow-y: auto;
-  padding: 2px 4px;
+  padding: 5px 8px 5px 10px;
   border-radius: var(--radius-s);
+  border-left: 2px solid rgba(0, 0, 0, 0.26);
+  background: rgba(0, 0, 0, 0.07);
   outline: none;
   font-family: var(--font-body);
-  font-size: 0.9rem;
-  line-height: 1.45;
+  font-size: 0.88rem;
+  line-height: 1.42;
   color: var(--color-ink);
   user-select: text;
   cursor: text;
 }
 
+.mission-block[data-empty="true"] .mission-editor {
+  background: rgba(0, 0, 0, 0.045);
+  border-left-color: rgba(0, 0, 0, 0.2);
+}
+
 .mission-editor:focus {
-  background: rgba(0, 0, 0, 0.08);
+  background: rgba(0, 0, 0, 0.11);
+  border-left-color: var(--color-line-strong);
 }
 
 .mission-editor[data-empty="true"]::before {
@@ -358,10 +519,12 @@ body.is-sidebar-collapsed .side-head {
 }
 
 .previous-mission {
-  margin: 6px 0 0;
-  font-size: 0.85rem;
+  margin: 0;
+  padding-left: 9px;
+  border-left: 2px solid rgba(0, 0, 0, 0.16);
+  font-size: 0.8rem;
   color: var(--color-ink-muted);
-  line-height: 1.5;
+  line-height: 1.45;
 }
 
 .previous-mission strong {
@@ -399,16 +562,23 @@ body.is-sidebar-collapsed .side-head {
   min-width: 18px;
   height: 18px;
   padding: 0;
-  border-color: var(--color-line-strong);
+  border: 0;
   color: var(--color-accent);
-  background: rgba(255, 255, 255, 0.48);
+  background: transparent;
   font-size: 0.8rem;
   font-weight: 600;
   line-height: 1;
+  border-radius: var(--radius-s);
+  transition: background-color 120ms ease;
+}
+
+.projects-add-icon:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.09);
+  border-color: transparent;
 }
 
 .projects-list {
-  min-height: 92px;
+  min-height: 56px;
   flex: 0 0 auto;
   overflow-y: auto;
   display: grid;
@@ -416,7 +586,7 @@ body.is-sidebar-collapsed .side-head {
   gap: 6px;
   align-content: start;
   padding-right: 2px;
-  max-height: 118px;
+  max-height: 112px;
 }
 
 .projects-empty {
@@ -434,8 +604,12 @@ body.is-sidebar-collapsed .side-head {
 
 .project-launch {
   position: relative;
+  isolation: isolate;
   width: 100%;
+  border: 0;
   padding-right: 34px;
+  padding-top: 4px;
+  padding-bottom: 4px;
   text-align: left;
   font-size: 0.84rem;
   font-weight: 500;
@@ -443,11 +617,38 @@ body.is-sidebar-collapsed .side-head {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  background: rgba(255, 255, 255, 0.42);
+  background: transparent;
+  transition: transform 120ms ease;
+}
+
+/* Project chips are rendered as highlighter strokes so they feel textual, not button-box UI. */
+.project-launch::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  right: 28px;
+  top: 52%;
+  height: 74%;
+  transform: translateY(-50%) rotate(-0.24deg);
+  border-radius: 3px;
+  background: var(--color-project-highlight);
+  pointer-events: none;
+  z-index: -1;
+  transition: background-color 120ms ease;
+}
+
+.project-launch:hover::before,
+.project-launch:focus-visible::before {
+  background: var(--color-project-highlight-strong);
+}
+
+.project-launch:active {
+  transform: translateY(0.5px);
 }
 
 .project-launch.is-physical {
-  border-style: dashed;
+  text-decoration: underline dotted rgba(0, 0, 0, 0.5);
+  text-underline-offset: 2px;
 }
 
 .project-launch[data-tip-visible="true"]::after {
@@ -472,21 +673,23 @@ body.is-sidebar-collapsed .side-head {
   top: 50%;
   right: 7px;
   transform: translateY(-50%);
-  width: 19px;
-  min-width: 19px;
-  height: 19px;
+  width: 18px;
+  min-width: 18px;
+  height: 18px;
+  border: 0;
   padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-color: rgba(0, 0, 0, 0.36);
   color: var(--color-accent);
-  background: rgba(255, 255, 255, 0.76);
+  background: transparent;
+  border-radius: var(--radius-s);
+  transition: background-color 120ms ease;
 }
 
 .project-edit-icon:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.12);
-  border-color: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.1);
+  border-color: transparent;
 }
 
 .project-edit-glyph {
@@ -699,7 +902,7 @@ body.is-sidebar-collapsed .side-head {
 
 @media (max-width: 980px) {
   :root {
-    --sidebar-open-width: 210px;
+    --sidebar-open-width: 190px;
   }
 
   #app-shell {
@@ -722,13 +925,13 @@ body.is-sidebar-collapsed .side-head {
 
 @media (max-width: 760px) {
   :root {
-    --sidebar-open-width: 180px;
+    --sidebar-open-width: 170px;
   }
 
   #canvas {
     /* Keep two columns even on narrow widths so width behavior stays deterministic. */
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-auto-rows: minmax(230px, 1fr);
+    grid-auto-rows: minmax(190px, auto);
     overflow-y: auto;
   }
 

@@ -5,6 +5,8 @@ persistence, and DOM rendering into one interactive experience.
 It imports domain rules from `src/model.js`, board-shaping helpers from `src/layout.js`,
 storage adapters from `src/storage.js`, local preference adapters from `src/devicePrefs.js`,
 and transfer/google-sync scaffolding from `src/transfer.js` and `src/googleSync.js`.
+It also coordinates lightweight floating controls (mission menu) and sidebar preference toggles
+so the interface stays compact without losing keyboard and pointer clarity.
 */
 
 import { buildCampaignSlots, buildProjectsByCampaign, MAX_CAMPAIGN_SLOTS } from "./layout.js";
@@ -14,6 +16,8 @@ import {
   addCampaign,
   renameCampaign,
   updateCampaignMission,
+  completeCampaignMission,
+  clearCampaignMissionHistory,
   deleteCampaign,
   addProject,
   updateProject,
@@ -48,7 +52,8 @@ const summaryElement = document.querySelector("#state-summary");
 const panelRootElement = document.querySelector("#panel-root");
 const addCampaignButton = document.querySelector("#add-campaign-button");
 const addProjectButton = document.querySelector("#add-project-button");
-const browserTargetSelect = document.querySelector("#browser-target-select");
+const browserTargetButton = document.querySelector("#browser-target-button");
+const browserTargetLabel = document.querySelector("#browser-target-label");
 const exportDataButton = document.querySelector("#export-data-button");
 const importDataButton = document.querySelector("#import-data-button");
 const googleSyncButton = document.querySelector("#google-sync-button");
@@ -67,6 +72,31 @@ let isSidebarCollapsed = false;
 
 const projectTooltipTimers = new WeakMap();
 
+function setMissionMenuOpenState(menuElement, triggerElement, isOpen) {
+  menuElement.dataset.open = isOpen ? "true" : "false";
+  triggerElement.setAttribute("aria-expanded", isOpen ? "true" : "false");
+}
+
+function closeMissionMenus() {
+  // Mission menus are lightweight overlays, so we close all of them in one pass.
+  document.querySelectorAll(".mission-menu").forEach((menuElement) => {
+    menuElement.dataset.open = "false";
+  });
+
+  document.querySelectorAll(".mission-menu-trigger").forEach((triggerElement) => {
+    triggerElement.setAttribute("aria-expanded", "false");
+  });
+}
+
+function closeFloatingUi() {
+  // All lightweight overlays close together so global interactions remain predictable.
+  closeMissionMenus();
+}
+
+function formatWebBrowserTargetLabel(target) {
+  return sanitizeWebBrowserTarget(target) === WEB_BROWSER_TARGETS.EDGE ? "Edge (best effort)" : "Current Browser";
+}
+
 function sanitizeWebBrowserTarget(target) {
   return target === WEB_BROWSER_TARGETS.EDGE ? WEB_BROWSER_TARGETS.EDGE : WEB_BROWSER_TARGETS.CURRENT;
 }
@@ -79,9 +109,15 @@ function applyDevicePrefs(nextPrefs) {
     webBrowserTarget: sanitizeWebBrowserTarget(nextPrefs?.webBrowserTarget)
   };
 
-  // The sidebar select mirrors the active in-memory preference.
-  if (browserTargetSelect) {
-    browserTargetSelect.value = devicePrefs.webBrowserTarget;
+  // Sidebar text mirrors the active in-memory preference for quick one-click switching.
+  if (browserTargetLabel) {
+    browserTargetLabel.textContent = `Web: ${formatWebBrowserTargetLabel(devicePrefs.webBrowserTarget)}`;
+  }
+
+  if (browserTargetButton) {
+    const helper = formatWebBrowserTargetLabel(devicePrefs.webBrowserTarget);
+    browserTargetButton.title = `Web opens in ${helper}. Click to switch target.`;
+    browserTargetButton.setAttribute("aria-label", browserTargetButton.title);
   }
 }
 
@@ -126,6 +162,7 @@ function applyState(nextState, options = { persist: true }) {
 }
 
 function closePanel() {
+  closeFloatingUi();
   panelRootElement.hidden = true;
   panelRootElement.innerHTML = "";
 }
@@ -720,10 +757,16 @@ function openProjectEditor(options = {}) {
   });
 }
 
-function applyMissionEditorPlaceholder(missionEditor, missionValue) {
+function syncMissionEmptyState(missionSection, missionEditor) {
+  const hasMission = Boolean(missionEditor.textContent.trim());
+  missionEditor.dataset.empty = hasMission ? "false" : "true";
+  missionSection.dataset.empty = hasMission ? "false" : "true";
+}
+
+function applyMissionEditorPlaceholder(missionSection, missionEditor, missionValue) {
   const mission = (missionValue || "").trim();
   missionEditor.textContent = mission;
-  missionEditor.dataset.empty = mission ? "false" : "true";
+  syncMissionEmptyState(missionSection, missionEditor);
 }
 
 function buildProjectEditGlyph() {
@@ -812,6 +855,61 @@ function renderCampaignCard(campaign, projects) {
   const headerActions = document.createElement("div");
   headerActions.className = "campaign-header-actions";
 
+  const missionMenuWrap = document.createElement("div");
+  missionMenuWrap.className = "mission-menu-wrap";
+
+  const missionMenuTrigger = document.createElement("button");
+  missionMenuTrigger.type = "button";
+  missionMenuTrigger.className = "mission-menu-trigger";
+  missionMenuTrigger.textContent = "...";
+  missionMenuTrigger.title = `Mission options for ${campaign.name}`;
+  missionMenuTrigger.setAttribute("aria-label", `Mission options for ${campaign.name}`);
+  missionMenuTrigger.setAttribute("aria-haspopup", "menu");
+  missionMenuTrigger.setAttribute("aria-expanded", "false");
+
+  const missionMenu = document.createElement("div");
+  missionMenu.className = "mission-menu";
+  missionMenu.dataset.open = "false";
+  missionMenu.setAttribute("role", "menu");
+  missionMenu.setAttribute("aria-label", `Mission actions for ${campaign.name}`);
+
+  const markDoneButton = document.createElement("button");
+  markDoneButton.type = "button";
+  markDoneButton.textContent = "Mark Mission Done";
+  markDoneButton.setAttribute("role", "menuitem");
+  markDoneButton.disabled = !campaign.currentMission;
+  markDoneButton.addEventListener("click", () => {
+    // Mission history only rolls forward when the user explicitly marks completion.
+    applyState(completeCampaignMission(state, campaign.id));
+    closeMissionMenus();
+  });
+
+  const clearHistoryButton = document.createElement("button");
+  clearHistoryButton.type = "button";
+  clearHistoryButton.textContent = "Clear Mission History";
+  clearHistoryButton.setAttribute("role", "menuitem");
+  clearHistoryButton.disabled = !campaign.previousMission;
+  clearHistoryButton.addEventListener("click", () => {
+    applyState(clearCampaignMissionHistory(state, campaign.id));
+    closeMissionMenus();
+  });
+
+  missionMenu.append(markDoneButton, clearHistoryButton);
+  missionMenuWrap.append(missionMenuTrigger, missionMenu);
+
+  missionMenuTrigger.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const shouldOpen = missionMenu.dataset.open !== "true";
+    closeMissionMenus();
+    setMissionMenuOpenState(missionMenu, missionMenuTrigger, shouldOpen);
+  });
+
+  missionMenu.addEventListener("click", (event) => {
+    // Menu clicks should not bubble into the global outside-click closer.
+    event.stopPropagation();
+  });
+
   const deleteButton = document.createElement("button");
   deleteButton.type = "button";
   deleteButton.className = "campaign-delete";
@@ -825,25 +923,24 @@ function renderCampaignCard(campaign, projects) {
     applyState(deleteCampaign(state, campaign.id));
   });
 
-  headerActions.append(deleteButton);
+  headerActions.append(missionMenuWrap, deleteButton);
   header.append(title, headerActions);
 
   const missionSection = document.createElement("section");
   missionSection.className = "mission-block";
-  missionSection.title = "Current mission. Click to edit.";
+  missionSection.title = "Current mission. Click to edit. Use menu for done/history actions.";
 
   const missionEditor = document.createElement("div");
   missionEditor.className = "mission-editor";
   missionEditor.contentEditable = "true";
   missionEditor.spellcheck = true;
-  // We keep the mission affordance lightweight and rely on tooltip text for context.
+  // The mission field is intentionally compact; the contextual label lives in tooltip text.
   missionEditor.title = "Current mission. Click to edit.";
   missionEditor.setAttribute("aria-label", `Current mission for ${campaign.name}`);
-  applyMissionEditorPlaceholder(missionEditor, campaign.currentMission);
+  applyMissionEditorPlaceholder(missionSection, missionEditor, campaign.currentMission);
 
   missionEditor.addEventListener("input", () => {
-    const text = missionEditor.textContent.trim();
-    missionEditor.dataset.empty = text ? "false" : "true";
+    syncMissionEmptyState(missionSection, missionEditor);
   });
 
   missionEditor.addEventListener("keydown", (event) => {
@@ -940,10 +1037,14 @@ function renderSummary() {
   const campaignCount = state.campaigns.length;
   const projectCount = state.projects.length;
   const missionCount = state.campaigns.filter((campaign) => campaign.currentMission).length;
-
-  summaryElement.textContent = `${campaignCount} campaign${campaignCount === 1 ? "" : "s"} · ${projectCount} project${
+  const verboseSummary = `${campaignCount} campaign${campaignCount === 1 ? "" : "s"} · ${projectCount} project${
     projectCount === 1 ? "" : "s"
   } · ${missionCount} active mission${missionCount === 1 ? "" : "s"}`;
+
+  // Compact tokens reduce sidebar text load, while title/aria preserve full clarity.
+  summaryElement.textContent = `${campaignCount}c · ${projectCount}p · ${missionCount}m`;
+  summaryElement.title = verboseSummary;
+  summaryElement.setAttribute("aria-label", verboseSummary);
 }
 
 function syncSidebarActionStates() {
@@ -1016,11 +1117,14 @@ function bindGlobalEvents() {
     googleSyncButton.addEventListener("click", openGoogleSyncPanel);
   }
 
-  if (browserTargetSelect) {
-    browserTargetSelect.addEventListener("change", async () => {
+  if (browserTargetButton) {
+    browserTargetButton.addEventListener("click", async () => {
+      const currentTarget = sanitizeWebBrowserTarget(devicePrefs.webBrowserTarget);
+      const toggledTarget =
+        currentTarget === WEB_BROWSER_TARGETS.CURRENT ? WEB_BROWSER_TARGETS.EDGE : WEB_BROWSER_TARGETS.CURRENT;
       const nextPrefs = {
         ...devicePrefs,
-        webBrowserTarget: sanitizeWebBrowserTarget(browserTargetSelect.value)
+        webBrowserTarget: toggledTarget
       };
 
       applyDevicePrefs(nextPrefs);
@@ -1037,6 +1141,20 @@ function bindGlobalEvents() {
     if (event.key === "Escape") {
       closePanel();
     }
+  });
+
+  window.addEventListener("pointerdown", (event) => {
+    const targetElement = event.target instanceof Element ? event.target : null;
+
+    if (!targetElement) {
+      return;
+    }
+
+    if (targetElement.closest(".mission-menu-wrap")) {
+      return;
+    }
+
+    closeFloatingUi();
   });
 }
 

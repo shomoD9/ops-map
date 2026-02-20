@@ -389,21 +389,32 @@ export function updateCampaignMission(state, campaignId, missionInput) {
       return campaign;
     }
 
-    // Clearing mission is explicit in v1 and should return to a true "unset" state.
-    if (!nextMission) {
-      if (!campaign.currentMission && !campaign.previousMission) {
-        return campaign;
-      }
-
-      didChange = true;
-      return {
-        ...campaign,
-        currentMission: "",
-        previousMission: ""
-      };
+    if (campaign.currentMission === nextMission) {
+      return campaign;
     }
 
-    if (campaign.currentMission === nextMission) {
+    didChange = true;
+
+    // Editing current mission text should not rewrite history; history rolls only on explicit completion.
+    return {
+      ...campaign,
+      currentMission: nextMission
+    };
+  });
+
+  return didChange ? withUpdatedStamp({ ...state, campaigns }) : state;
+}
+
+export function completeCampaignMission(state, campaignId) {
+  let didChange = false;
+
+  const campaigns = state.campaigns.map((campaign) => {
+    if (campaign.id !== campaignId) {
+      return campaign;
+    }
+
+    const currentMission = cleanMission(campaign.currentMission);
+    if (!currentMission) {
       return campaign;
     }
 
@@ -411,8 +422,27 @@ export function updateCampaignMission(state, campaignId, missionInput) {
 
     return {
       ...campaign,
-      currentMission: nextMission,
-      previousMission: campaign.currentMission ? campaign.currentMission : campaign.previousMission
+      previousMission: currentMission,
+      currentMission: ""
+    };
+  });
+
+  return didChange ? withUpdatedStamp({ ...state, campaigns }) : state;
+}
+
+export function clearCampaignMissionHistory(state, campaignId) {
+  let didChange = false;
+
+  const campaigns = state.campaigns.map((campaign) => {
+    if (campaign.id !== campaignId || !campaign.previousMission) {
+      return campaign;
+    }
+
+    didChange = true;
+
+    return {
+      ...campaign,
+      previousMission: ""
     };
   });
 

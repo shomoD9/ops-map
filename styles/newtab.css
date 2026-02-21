@@ -513,16 +513,18 @@ body.is-sidebar-collapsed .sidebar-toggle {
 }
 
 .campaign-title {
+  /* Campaign emphasis stays subtle by using the same family with tuned weight/spacing. */
   margin: 0;
   padding: 0 2px;
   border-radius: var(--radius-s);
   font-family: var(--font-heading);
   font-size: 1.74rem;
-  font-weight: 790;
+  font-weight: 760;
   line-height: 1.02;
-  letter-spacing: 0.015em;
-  font-variation-settings: "wght" 790;
-  text-shadow: 0 1px 0 rgba(255, 245, 233, 0.92), 0 6px 14px rgba(50, 33, 23, 0.16);
+  letter-spacing: 0.012em;
+  font-variation-settings: "wght" 760;
+  /* Keep lift visible on warm parchment backgrounds without introducing a dramatic glow. */
+  text-shadow: 0 1px 0 rgba(255, 245, 233, 0.74), 0 2px 6px rgba(52, 34, 24, 0.16);
   color: var(--color-accent);
   user-select: text;
   cursor: text;
@@ -754,9 +756,12 @@ body.is-sidebar-collapsed .sidebar-toggle {
   padding-top: 6px;
   padding-bottom: 6px;
   text-align: left;
+  /* Project names are emphasized through weight plus a whisper of contrast shadow, not larger sizing. */
   color: var(--color-project-ink-strong);
   font-size: 1.03rem;
-  font-weight: 620;
+  font-weight: 700;
+  letter-spacing: 0.003em;
+  text-shadow: 0 1px 0 rgba(255, 248, 238, 0.46);
   line-height: 1.4;
   white-space: nowrap;
   overflow: hidden;

@@ -6,14 +6,7 @@ It is separate from synced map state because browser-launch preferences differ b
 
 const DEVICE_PREFS_KEY = "opsMapDevicePrefsV1";
 
-export const WEB_BROWSER_TARGETS = {
-  CURRENT: "current",
-  EDGE: "edge"
-};
-
-export const DEFAULT_DEVICE_PREFS = {
-  webBrowserTarget: WEB_BROWSER_TARGETS.CURRENT
-};
+export const DEFAULT_DEVICE_PREFS = {};
 
 function hasChromeLocalStorage() {
   return typeof chrome !== "undefined" && Boolean(chrome.storage?.local);
@@ -23,19 +16,12 @@ function getRuntimeErrorMessage() {
   return chrome?.runtime?.lastError?.message ?? "Unknown storage error";
 }
 
-function sanitizeWebBrowserTarget(target) {
-  // We default to current browser for safety if the stored target is unknown.
-  return target === WEB_BROWSER_TARGETS.EDGE ? WEB_BROWSER_TARGETS.EDGE : WEB_BROWSER_TARGETS.CURRENT;
-}
-
 function normalizeDevicePrefs(rawPrefs) {
   if (!rawPrefs || typeof rawPrefs !== "object") {
     return { ...DEFAULT_DEVICE_PREFS };
   }
 
-  return {
-    webBrowserTarget: sanitizeWebBrowserTarget(rawPrefs.webBrowserTarget)
-  };
+  return { ...DEFAULT_DEVICE_PREFS, ...rawPrefs };
 }
 
 export async function loadDevicePrefs() {

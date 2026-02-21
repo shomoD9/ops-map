@@ -58,8 +58,14 @@ while language appears in high-contrast dark strokes.
   --color-line-soft: rgba(33, 23, 18, 0.08);
   --color-action-highlight: rgba(38, 25, 18, 0.08);
   --color-action-highlight-strong: rgba(38, 25, 18, 0.14);
-  --color-project-highlight: rgba(52, 34, 24, 0.11);
-  --color-project-highlight-strong: rgba(52, 34, 24, 0.18);
+  --color-project-highlight: rgba(52, 34, 24, 0.15);
+  --color-project-highlight-strong: rgba(52, 34, 24, 0.22);
+  --color-project-band: rgba(33, 23, 18, 0.08);
+  --color-project-band-strong: rgba(33, 23, 18, 0.12);
+  --color-project-rail: rgba(28, 19, 14, 0.3);
+  --color-project-ink-strong: #170f0b;
+  --project-motion-duration: 140ms;
+  --project-motion-ease: ease-out;
 
   --radius-s: 4px;
   --radius-m: 6px;
@@ -645,11 +651,17 @@ body.is-sidebar-collapsed .sidebar-toggle {
 }
 
 .projects-block {
+  /* Projects are framed as a folio zone so execution work reads as the card's main payload. */
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   /* Keep project content anchored toward the top rather than vertically centered in tall cards. */
   flex: 0 0 auto;
+  margin-top: 4px;
+  padding: 8px 10px 9px;
+  border-radius: var(--radius-m);
+  background: linear-gradient(to bottom, var(--color-project-band) 0%, rgba(255, 251, 244, 0.38) 100%);
+  box-shadow: inset 0 0 0 1px rgba(28, 19, 14, 0.12);
 }
 
 .projects-header {
@@ -657,23 +669,24 @@ body.is-sidebar-collapsed .sidebar-toggle {
   align-items: center;
   justify-content: flex-start;
   gap: var(--space-2);
+  margin-bottom: 1px;
 }
 
 .projects-header::after {
   content: "";
   flex: 1;
   height: 1px;
-  background: rgba(35, 24, 17, 0.14);
+  background: rgba(35, 24, 17, 0.18);
   margin-left: 2px;
 }
 
 .projects-label {
   margin: 0;
-  color: var(--color-accent);
+  color: var(--color-project-ink-strong);
   font-family: var(--font-heading);
-  font-size: 0.78rem;
-  font-weight: 760;
-  letter-spacing: 0.16em;
+  font-size: 0.86rem;
+  font-weight: 790;
+  letter-spacing: 0.19em;
   text-transform: uppercase;
   font-variant-caps: all-small-caps;
 }
@@ -684,17 +697,19 @@ body.is-sidebar-collapsed .sidebar-toggle {
   height: 20px;
   padding: 0;
   border: 0;
-  color: var(--color-accent);
+  color: var(--color-project-ink-strong);
   background: transparent;
-  font-size: 0.92rem;
-  font-weight: 600;
+  font-size: 0.88rem;
+  font-weight: 560;
   line-height: 1;
   border-radius: var(--radius-s);
-  transition: background-color 120ms ease;
+  opacity: 0.72;
+  transition: background-color var(--project-motion-duration) var(--project-motion-ease), opacity var(--project-motion-duration) var(--project-motion-ease);
 }
 
 .projects-add-icon:hover:not(:disabled) {
-  background: var(--color-action-highlight-strong);
+  background: var(--color-project-band-strong);
+  opacity: 1;
   border-color: transparent;
 }
 
@@ -704,8 +719,8 @@ body.is-sidebar-collapsed .sidebar-toggle {
   /* We intentionally avoid internal scrolling so the campaign card grows with project volume. */
   overflow-y: visible;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 7px;
   align-content: start;
   padding-right: 0;
   max-height: none;
@@ -714,14 +729,20 @@ body.is-sidebar-collapsed .sidebar-toggle {
 .projects-empty {
   margin: 0;
   grid-column: 1 / -1;
-  color: var(--color-ink-muted);
-  font-size: 1rem;
-  line-height: 1.55;
+  color: var(--color-ink);
+  font-size: 1.02rem;
+  line-height: 1.5;
+  opacity: 0.84;
 }
 
-/* Each project entry stays compact and textual, with edit control nearby but not dominant. */
+/* Rows use an ink rail and framed backdrop so projects stay legible under heavy campaign density. */
 .campaign-project-row {
   position: relative;
+  border-left: 1.5px solid var(--color-project-rail);
+  border-radius: var(--radius-s);
+  padding: 2px 2px 2px 8px;
+  background: rgba(33, 23, 18, 0.04);
+  transition: background-color var(--project-motion-duration) var(--project-motion-ease);
 }
 
 .project-launch {
@@ -730,33 +751,34 @@ body.is-sidebar-collapsed .sidebar-toggle {
   width: 100%;
   border: 0;
   padding-right: 34px;
-  padding-top: 5px;
-  padding-bottom: 5px;
+  padding-top: 6px;
+  padding-bottom: 6px;
   text-align: left;
-  font-size: 0.98rem;
-  font-weight: 560;
+  color: var(--color-project-ink-strong);
+  font-size: 1.03rem;
+  font-weight: 620;
   line-height: 1.4;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   background: transparent;
-  transition: transform 120ms ease;
+  transition: transform var(--project-motion-duration) var(--project-motion-ease), color var(--project-motion-duration) var(--project-motion-ease);
 }
 
 /* Project chips are rendered as highlighter strokes so they feel textual, not button-box UI. */
 .project-launch::before {
   content: "";
   position: absolute;
-  left: 2px;
+  left: 0;
   right: 28px;
   top: 52%;
-  height: 74%;
+  height: 78%;
   transform: translateY(-50%) rotate(-0.24deg);
   border-radius: 3px;
   background: var(--color-project-highlight);
   pointer-events: none;
   z-index: -1;
-  transition: background-color 120ms ease;
+  transition: background-color var(--project-motion-duration) var(--project-motion-ease);
 }
 
 .project-launch:hover::before,
@@ -764,12 +786,21 @@ body.is-sidebar-collapsed .sidebar-toggle {
   background: var(--color-project-highlight-strong);
 }
 
+.campaign-project-row:hover {
+  background: rgba(33, 23, 18, 0.06);
+}
+
+.project-launch:hover,
+.project-launch:focus-visible {
+  transform: translateY(-0.5px);
+}
+
 .project-launch:active {
-  transform: translateY(0.5px);
+  transform: translateY(0);
 }
 
 .project-launch.is-physical {
-  text-decoration: underline dotted rgba(40, 26, 18, 0.5);
+  text-decoration: underline dotted rgba(28, 18, 13, 0.62);
   text-underline-offset: 2px;
 }
 
@@ -780,7 +811,7 @@ body.is-sidebar-collapsed .sidebar-toggle {
   top: calc(100% + 4px);
   border-radius: var(--radius-s);
   background: #eee4d5;
-  color: var(--color-accent);
+  color: var(--color-project-ink-strong);
   font-size: 0.8rem;
   font-weight: 500;
   line-height: 1.2;
@@ -804,14 +835,21 @@ body.is-sidebar-collapsed .sidebar-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-accent);
-  background: transparent;
+  color: var(--color-project-ink-strong);
+  background: rgba(33, 23, 18, 0.04);
   border-radius: var(--radius-s);
-  transition: background-color 120ms ease;
+  opacity: 0.74;
+  transition: background-color var(--project-motion-duration) var(--project-motion-ease), opacity var(--project-motion-duration) var(--project-motion-ease);
+}
+
+.campaign-project-row:hover .project-edit-icon,
+.project-edit-icon:focus-visible {
+  opacity: 0.95;
 }
 
 .project-edit-icon:hover:not(:disabled) {
-  background: var(--color-action-highlight-strong);
+  background: var(--color-project-band-strong);
+  opacity: 1;
   border-color: transparent;
 }
 
@@ -1070,7 +1108,4 @@ body.is-sidebar-collapsed .sidebar-toggle {
     bottom: var(--space-3);
   }
 
-  .projects-list {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }

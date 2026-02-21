@@ -5,7 +5,7 @@ renders live campaign data into it.
 It provides the collapsible sidebar controls, the fixed campaign board container, and the lightweight
 panel root for create/edit/import/export workflows.
 The sidebar presents every core action in one stack so power users can work in one click, then collapses
-to icon-only mode for fast muscle-memory interaction.
+to icon-only mode for fast muscle-memory interaction, including the synced mood toggle for aesthetics.
 -->
 <!doctype html>
 <html lang="en">
@@ -13,7 +13,7 @@ to icon-only mode for fast muscle-memory interaction.
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Ops Map</title>
-    <link rel="stylesheet" href="styles/newtab.css" />
+    <link id="theme-stylesheet" rel="stylesheet" href="styles/newtab.css" />
   </head>
   <body class="is-sidebar-collapsed">
     <div id="app-shell">
@@ -46,6 +46,10 @@ to icon-only mode for fast muscle-memory interaction.
         </div>
 
         <div class="side-section secondary-actions">
+          <button id="aesthetic-toggle-button" class="side-action" type="button" title="Switch aesthetic mood">
+            <span class="side-action-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M8 2.5A5.5 5.5 0 1 0 8 13.5 4 4 0 1 1 8 2.5Z"/><path d="M10.5 4.5h2"/><path d="M11.5 3.5v2"/></svg></span>
+            <span id="aesthetic-toggle-label" class="side-action-label">Aesthetic: Bhadralok</span>
+          </button>
           <button id="export-data-button" class="side-action" type="button" title="Export map data">
             <span class="side-action-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M8 10V3"/><path d="M5.5 5.5 8 3l2.5 2.5"/><path d="M3.5 9.5v3.5h9v-3.5"/></svg></span>
             <span class="side-action-label">Export Data</span>

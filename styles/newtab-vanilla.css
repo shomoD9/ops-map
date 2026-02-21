@@ -1,0 +1,1021 @@
+/*
+This stylesheet defines Ops Map's vanilla design system.
+It exists as a separate file so `src/main.js` can switch between vanilla and bhadralok aesthetics
+by swapping one stylesheet link, without changing domain logic or render structure.
+It styles the shell in `newtab.html` and class hooks emitted by `src/main.js`, using a monochrome
+off-white/black palette, Garamond typography, and hand-drawn-like campaign borders as the calmer baseline mood.
+The sidebar keeps the sketch-frame treatment and now includes SVG icon compatibility so this legacy visual mode
+stays intact with the current icon markup.
+*/
+
+@font-face {
+  font-family: "Newsreader";
+  src: url("fonts/Newsreader-Variable.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Sans";
+  src: url("fonts/IBMPlexSans-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Sans";
+  src: url("fonts/IBMPlexSans-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Sans";
+  src: url("fonts/IBMPlexSans-SemiBold.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --font-heading: "Newsreader", "Garamond", "EB Garamond", "Adobe Garamond Pro", "Times New Roman", serif;
+  --font-body: "Newsreader", "Garamond", "EB Garamond", "Adobe Garamond Pro", "Times New Roman", serif;
+  --font-ui: "IBM Plex Sans", -apple-system, system-ui, sans-serif;
+
+  --color-paper: #f9f8f5;
+  --color-paper-alt: #f4f3f0;
+  --color-surface: #f7f6f3;
+  --color-ink: #121212;
+  --color-ink-muted: #484340;
+  --color-accent: #111111;
+  --color-accent-soft: #eceae6;
+  --color-line: #161616;
+  --color-line-strong: #111111;
+  --color-line-soft: rgba(80, 60, 30, 0.16);
+  --color-action-highlight: rgba(138, 123, 84, 0.2);
+  --color-action-highlight-strong: rgba(138, 123, 84, 0.3);
+  --color-project-highlight: rgba(201, 175, 110, 0.24);
+  --color-project-highlight-strong: rgba(201, 175, 110, 0.33);
+
+  --radius-s: 4px;
+  --radius-m: 6px;
+  --radius-l: 8px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 28px;
+  --space-7: 30px;
+  --space-8: 8px;
+  --campaign-card-min-width: 300px;
+
+  --sidebar-open-width: 204px;
+  --sidebar-closed-width: 54px;
+  --focus-ring: 2px solid rgba(0, 0, 0, 0.48);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--color-ink);
+  background: var(--color-paper);
+  overflow: hidden;
+}
+
+#app-shell {
+  width: 100%;
+  height: 100%;
+  /* Outer margins are intentionally minimal so the board uses the full new-tab viewport. */
+  padding: 4px 8px 0;
+  display: grid;
+  grid-template-columns: var(--sidebar-open-width) minmax(0, 1fr);
+  gap: 12px;
+  position: relative;
+}
+
+body.is-sidebar-collapsed #app-shell {
+  grid-template-columns: var(--sidebar-closed-width) minmax(0, 1fr);
+}
+
+/* Sidebar behaves like a quiet page margin rather than a control console. */
+.side-bar {
+  position: relative;
+  height: 100%;
+  border-radius: var(--radius-l);
+  border: none;
+  background: #f6f5f2;
+  padding: 10px 10px 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.side-bar::before,
+.side-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1.6px solid var(--color-line-strong);
+  border-radius: var(--radius-l);
+  pointer-events: none;
+}
+
+.side-bar::before {
+  transform: translate(0.65px, -0.5px) rotate(-0.22deg);
+}
+
+.side-bar::after {
+  inset: 1px;
+  transform: translate(-0.55px, 0.6px) rotate(0.19deg);
+  opacity: 0.9;
+}
+
+.side-bar > * {
+  position: relative;
+  z-index: 1;
+}
+
+.side-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.sidebar-toggle {
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  border-radius: var(--radius-s);
+  border: 0;
+  background: transparent;
+  color: var(--color-accent);
+  font-family: var(--font-ui);
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.sidebar-toggle:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.brand-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.brand-block h1 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  color: var(--color-accent);
+}
+
+.brand-block p {
+  margin: 0;
+  font-family: var(--font-ui);
+  color: var(--color-ink-muted);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.side-section {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.primary-actions {
+  /* Group boundaries are separators, not nested boxes, to keep the column visually calm. */
+  margin-top: 2px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-line-soft);
+}
+
+/* Secondary actions remain one-click visible instead of hiding behind overflow controls. */
+.secondary-actions {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-line-soft);
+}
+
+button {
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: 0.94rem;
+  font-weight: 600;
+  line-height: 1.4;
+  padding: 7px 10px;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+/* Sidebar controls intentionally avoid boxed chrome and rely on text + highlight rhythm. */
+.side-action {
+  position: relative;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 6px 3px;
+  border-radius: var(--radius-s);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--color-ink);
+  transition: transform 120ms ease;
+}
+
+.side-action::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 52%;
+  height: 70%;
+  transform: translateY(-50%) rotate(-0.18deg);
+  border-radius: 3px;
+  background: var(--color-action-highlight);
+  opacity: 0;
+  transition: opacity 120ms ease, background-color 120ms ease;
+  pointer-events: none;
+}
+
+.side-action:hover::before,
+.side-action:focus-visible::before {
+  opacity: 1;
+}
+
+.side-action:active {
+  transform: translateY(0.5px);
+}
+
+.side-action-icon,
+.side-action-label {
+  position: relative;
+  z-index: 1;
+}
+
+.side-action-icon {
+  width: 18px;
+  min-width: 18px;
+  text-align: center;
+  color: var(--color-accent);
+  font-size: 1.06rem;
+  line-height: 1;
+}
+
+/* Vanilla originated with text glyph icons, so we explicitly size SVG icons for current markup. */
+.side-action-icon svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.side-action-label {
+  white-space: nowrap;
+}
+
+.side-action:hover:not(:disabled),
+.side-action:active:not(:disabled) {
+  background: transparent;
+  border-color: transparent;
+}
+
+button:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 0, 0, 0.56);
+}
+
+button:active:not(:disabled) {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.54;
+}
+
+button:focus-visible,
+select:focus-visible,
+input:focus-visible,
+[contenteditable="true"]:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.device-pref-control {
+  display: none;
+}
+
+body.is-sidebar-collapsed .side-bar {
+  padding: 8px 6px 7px;
+  align-items: stretch;
+}
+
+body.is-sidebar-collapsed .brand-block {
+  display: none;
+}
+
+body.is-sidebar-collapsed .side-head {
+  width: 100%;
+  justify-content: center;
+}
+
+body.is-sidebar-collapsed .side-section {
+  width: 100%;
+}
+
+body.is-sidebar-collapsed .side-action {
+  justify-content: center;
+  padding: 7px 0;
+}
+
+body.is-sidebar-collapsed .side-action-label {
+  display: none;
+}
+
+body.is-sidebar-collapsed .side-action-icon {
+  width: auto;
+  min-width: auto;
+  font-size: 1.1rem;
+}
+
+/* Collapsed mode keeps icon sizing consistent whether actions use text glyphs or SVGs. */
+body.is-sidebar-collapsed .side-action-icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+body.is-sidebar-collapsed .sidebar-toggle {
+  border: 0;
+  background: transparent;
+}
+
+/* The board remains a six-section composition with generous page-like gutters. */
+#canvas {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  /* Two columns remain fixed, but each card now keeps a width floor before text becomes too cramped. */
+  grid-template-columns: repeat(2, minmax(var(--campaign-card-min-width), 1fr));
+  /* Rows size from content, while each card keeps its own baseline min-height floor. */
+  grid-auto-rows: auto;
+  align-items: start;
+  gap: 24px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 6px 2px 20px;
+}
+
+.campaign-card {
+  position: relative;
+  border-radius: var(--radius-l);
+  border: none;
+  background: var(--color-surface);
+  padding: 14px 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 200px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  /* Explicit content-sized height prevents grid stretch behavior from hiding overflow growth. */
+  height: max-content;
+  align-self: start;
+  /* Mission menus are allowed to extend outside card flow without clipping. */
+  overflow: visible;
+}
+
+/* We layer two slightly offset strokes so campaign cards read as hand-drawn outlines. */
+.campaign-card::before,
+.campaign-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--color-line-strong);
+  border-radius: var(--radius-l);
+  pointer-events: none;
+}
+
+.campaign-card::before {
+  transform: translate(0.8px, -0.6px) rotate(-0.23deg);
+}
+
+.campaign-card::after {
+  inset: 1px;
+  transform: translate(-0.7px, 0.7px) rotate(0.2deg);
+  opacity: 0.92;
+}
+
+.campaign-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.campaign-card-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--space-3);
+}
+
+.campaign-title {
+  margin: 0;
+  padding: 0 2px;
+  border-radius: var(--radius-s);
+  font-family: var(--font-heading);
+  font-size: 1.55rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--color-accent);
+  user-select: text;
+  cursor: text;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.campaign-title:focus {
+  background: var(--color-accent-soft);
+  outline: none;
+  white-space: normal;
+}
+
+.campaign-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.mission-menu-wrap {
+  position: relative;
+}
+
+.mission-menu-trigger {
+  width: 30px;
+  min-width: 30px;
+  height: 26px;
+  padding: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.04em;
+}
+
+.mission-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 166px;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--color-line-strong);
+  background: var(--color-paper);
+  display: none;
+  flex-direction: column;
+  gap: 0;
+  z-index: 60;
+  pointer-events: auto;
+}
+
+.mission-menu[data-open="true"] {
+  display: flex;
+}
+
+.mission-menu button {
+  border: 0;
+  border-radius: 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.14);
+  text-align: left;
+  font-size: 0.88rem;
+  font-weight: 500;
+  padding: 7px 10px;
+}
+
+.mission-menu button:last-child {
+  border-bottom: 0;
+}
+
+.campaign-delete {
+  font-size: 0.9rem;
+  padding: 5px 10px;
+}
+
+.mission-block {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 0;
+}
+
+.mission-editor {
+  min-height: 30px;
+  max-height: 52px;
+  overflow-y: auto;
+  padding: 5px 8px 5px 10px;
+  border-radius: var(--radius-s);
+  border-left: 2px solid rgba(120, 100, 60, 0.35);
+  background: rgba(100, 80, 40, 0.06);
+  outline: none;
+  font-family: var(--font-body);
+  font-size: 0.96rem;
+  line-height: 1.42;
+  color: var(--color-ink);
+  user-select: text;
+  cursor: text;
+}
+
+.mission-block[data-empty="true"] .mission-editor {
+  background: rgba(100, 80, 40, 0.035);
+  border-left-color: rgba(120, 100, 60, 0.25);
+}
+
+.mission-editor:focus {
+  background: rgba(100, 80, 40, 0.09);
+  border-left-color: rgba(120, 100, 60, 0.55);
+}
+
+.mission-editor[data-empty="true"]::before {
+  content: "What's the next mission?";
+  color: var(--color-ink-muted);
+}
+
+.previous-mission {
+  margin: 0;
+  padding-left: 9px;
+  border-left: 2px solid rgba(120, 100, 60, 0.22);
+  font-size: 0.88rem;
+  font-style: italic;
+  color: var(--color-ink-muted);
+  line-height: 1.45;
+}
+
+.previous-mission strong {
+  font-weight: 600;
+}
+
+.projects-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  /* Keep project content anchored toward the top rather than vertically centered in tall cards. */
+  flex: 0 0 auto;
+}
+
+.projects-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-2);
+}
+
+.projects-header::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.09);
+  margin-left: 2px;
+}
+
+.projects-label {
+  margin: 0;
+  color: var(--color-accent);
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.projects-add-icon {
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  color: var(--color-accent);
+  background: transparent;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1;
+  border-radius: var(--radius-s);
+  transition: background-color 120ms ease;
+}
+
+.projects-add-icon:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.09);
+  border-color: transparent;
+}
+
+.projects-list {
+  min-height: 56px;
+  flex: 0 0 auto;
+  /* We intentionally avoid internal scrolling so the campaign card grows with project volume. */
+  overflow-y: visible;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  align-content: start;
+  padding-right: 0;
+  max-height: none;
+}
+
+.projects-empty {
+  margin: 0;
+  grid-column: 1 / -1;
+  color: var(--color-ink-muted);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+/* Each project entry stays compact and textual, with edit control nearby but not dominant. */
+.campaign-project-row {
+  position: relative;
+}
+
+.project-launch {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  border: 0;
+  padding-right: 34px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  text-align: left;
+  font-size: 0.95rem;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: transparent;
+  transition: transform 120ms ease;
+}
+
+/* Project chips are rendered as highlighter strokes so they feel textual, not button-box UI. */
+.project-launch::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  right: 28px;
+  top: 52%;
+  height: 74%;
+  transform: translateY(-50%) rotate(-0.24deg);
+  border-radius: 3px;
+  background: var(--color-project-highlight);
+  pointer-events: none;
+  z-index: -1;
+  transition: background-color 120ms ease;
+}
+
+.project-launch:hover::before,
+.project-launch:focus-visible::before {
+  background: var(--color-project-highlight-strong);
+}
+
+.project-launch:active {
+  transform: translateY(0.5px);
+}
+
+.project-launch.is-physical {
+  text-decoration: underline dotted rgba(0, 0, 0, 0.5);
+  text-underline-offset: 2px;
+}
+
+.project-launch[data-tip-visible="true"]::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 8px;
+  top: calc(100% + 4px);
+  border-radius: var(--radius-s);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  padding: 5px 7px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.project-edit-icon {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
+  border: 0;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-accent);
+  background: transparent;
+  border-radius: var(--radius-s);
+  transition: background-color 120ms ease;
+}
+
+.project-edit-icon:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.1);
+  border-color: transparent;
+}
+
+.project-edit-glyph {
+  width: 11px;
+  height: 11px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.campaign-slot-empty {
+  border-style: none;
+  background: rgba(255, 255, 255, 0.3);
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.empty-slot-title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-accent);
+}
+
+.empty-slot-body {
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: 0.98rem;
+  line-height: 1.6;
+}
+
+.empty-slot-create {
+  margin-top: 2px;
+}
+
+/* Panel stays practical but inherits the same editorial rhythm as the board. */
+#panel-root {
+  position: absolute;
+  z-index: 40;
+  right: var(--space-4);
+  bottom: var(--space-2);
+  width: min(430px, calc(100% - 40px));
+  border-radius: var(--radius-l);
+  border: 1px solid var(--color-line-strong);
+  background: var(--color-paper);
+  padding: var(--space-4);
+}
+
+#panel-root[hidden] {
+  display: none;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-3);
+}
+
+.panel-header h3 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--color-accent);
+}
+
+.panel-close {
+  font-size: 0.9rem;
+  padding: 6px 9px;
+}
+
+.panel-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: var(--space-3);
+}
+
+.panel-field label {
+  font-family: var(--font-ui);
+  color: var(--color-ink-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.panel-field input,
+.panel-field select,
+.panel-field textarea {
+  width: 100%;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-s);
+  padding: 8px 10px;
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--color-ink);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.panel-field textarea {
+  min-height: 74px;
+  resize: vertical;
+}
+
+.panel-field small {
+  color: var(--color-ink-muted);
+  line-height: 1.5;
+}
+
+.checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 7px;
+  max-height: 140px;
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.checkbox-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-s);
+  background: rgba(255, 255, 255, 0.45);
+  padding: 5px 9px;
+}
+
+.checkbox-chip input {
+  width: auto;
+  margin: 0;
+}
+
+.helper-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.helper-row input {
+  flex: 1;
+}
+
+.panel-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.panel-error {
+  min-height: 18px;
+  margin: 6px 0 0;
+  color: #1d1d1d;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.panel-note {
+  margin: 10px 0;
+  color: var(--color-ink-muted);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.panel-warning {
+  margin: 10px 0;
+  border-radius: var(--radius-m);
+  border: 1px solid rgba(0, 0, 0, 0.44);
+  background: rgba(0, 0, 0, 0.05);
+  padding: 10px 12px;
+}
+
+.panel-warning h4 {
+  margin: 0;
+  color: #1c1c1c;
+  font-size: 0.94rem;
+  line-height: 1.35;
+}
+
+.panel-warning p {
+  margin: 7px 0 0;
+  color: #222222;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.destructive-action {
+  border-color: rgba(0, 0, 0, 0.6);
+  color: #111111;
+  background: rgba(0, 0, 0, 0.07);
+}
+
+.destructive-action:hover {
+  background: rgba(0, 0, 0, 0.14);
+}
+
+@media (max-width: 1320px) {
+  #canvas {
+    gap: 20px;
+  }
+}
+
+@media (max-width: 980px) {
+  :root {
+    --sidebar-open-width: 190px;
+    --campaign-card-min-width: 250px;
+  }
+
+  #app-shell {
+    padding: 4px 6px 0;
+    gap: var(--space-4);
+  }
+
+  .brand-block h1 {
+    font-size: 1.25rem;
+  }
+
+  .brand-block p {
+    font-size: 0.74rem;
+  }
+
+  .campaign-title {
+    font-size: 1.35rem;
+  }
+}
+
+@media (max-width: 760px) {
+  :root {
+    --sidebar-open-width: 170px;
+    --campaign-card-min-width: 180px;
+  }
+
+  #canvas {
+    /* Keep two columns on narrow widths while allowing cards to respect their reduced minimum width. */
+    grid-template-columns: repeat(2, minmax(var(--campaign-card-min-width), 1fr));
+    grid-auto-rows: minmax(190px, auto);
+    overflow-y: auto;
+  }
+
+  #panel-root {
+    width: min(430px, calc(100% - 24px));
+    right: var(--space-3);
+    bottom: var(--space-3);
+  }
+
+  .projects-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

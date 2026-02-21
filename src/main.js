@@ -4,7 +4,8 @@ It exists as a separate module because it is the integration layer that connects
 persistence, and DOM rendering into one interactive experience.
 It imports domain rules from `src/model.js`, board-shaping helpers from `src/layout.js`,
 storage adapters from `src/storage.js`, local preference adapters from `src/devicePrefs.js`,
-and transfer/google-sync scaffolding from `src/transfer.js` and `src/googleSync.js`.
+shared aesthetic preference adapters from `src/aestheticPrefs.js`, and transfer/google-sync
+scaffolding from `src/transfer.js` and `src/googleSync.js`.
 It also coordinates lightweight floating controls (mission menu) and sidebar preference toggles
 so the interface stays compact without losing keyboard and pointer clarity.
 */
@@ -36,6 +37,14 @@ import {
   DEFAULT_DEVICE_PREFS
 } from "./devicePrefs.js";
 import {
+  AESTHETICS,
+  DEFAULT_AESTHETIC,
+  sanitizeAesthetic,
+  loadAestheticPref,
+  saveAestheticPref,
+  subscribeToAestheticPrefChanges
+} from "./aestheticPrefs.js";
+import {
   buildExportPayload,
   serializeExportPayload,
   parseImportPayload,
@@ -48,8 +57,11 @@ const sideBarElement = document.querySelector("#side-bar");
 const sidebarToggleButton = document.querySelector("#sidebar-toggle");
 const summaryElement = document.querySelector("#state-summary");
 const panelRootElement = document.querySelector("#panel-root");
+const themeStylesheetElement = document.querySelector("#theme-stylesheet");
 const addCampaignButton = document.querySelector("#add-campaign-button");
 const addProjectButton = document.querySelector("#add-project-button");
+const aestheticToggleButton = document.querySelector("#aesthetic-toggle-button");
+const aestheticToggleLabel = document.querySelector("#aesthetic-toggle-label");
 const exportDataButton = document.querySelector("#export-data-button");
 const importDataButton = document.querySelector("#import-data-button");
 const googleSyncButton = document.querySelector("#google-sync-button");
@@ -58,12 +70,22 @@ const importFileInput = document.querySelector("#import-file-input");
 const PROJECT_TOOLTIP_MS = 1600;
 const SAVE_DEBOUNCE_MS = 220;
 const EDITORIAL_CAMPAIGN_COLOR = "#3f536d";
+const AESTHETIC_STYLESHEETS = {
+  [AESTHETICS.BHADRALOK]: "styles/newtab.css",
+  [AESTHETICS.VANILLA]: "styles/newtab-vanilla.css"
+};
+const AESTHETIC_LABELS = {
+  [AESTHETICS.BHADRALOK]: "Bhadralok",
+  [AESTHETICS.VANILLA]: "Vanilla"
+};
 
 let state = createEmptyState();
 let devicePrefs = { ...DEFAULT_DEVICE_PREFS };
+let activeAesthetic = DEFAULT_AESTHETIC;
 let saveTimer = null;
 let unsubscribeStorage = null;
 let unsubscribeDevicePrefs = null;
+let unsubscribeAestheticPrefs = null;
 let isSidebarCollapsed = false;
 
 const projectTooltipTimers = new WeakMap();
@@ -87,6 +109,46 @@ function closeMissionMenus() {
 function closeFloatingUi() {
   // All lightweight overlays close together so global interactions remain predictable.
   closeMissionMenus();
+}
+
+function getNextAesthetic(currentAesthetic) {
+  return sanitizeAesthetic(currentAesthetic) === AESTHETICS.BHADRALOK ? AESTHETICS.VANILLA : AESTHETICS.BHADRALOK;
+}
+
+function getAestheticLabel(aesthetic) {
+  return AESTHETIC_LABELS[sanitizeAesthetic(aesthetic)] || AESTHETIC_LABELS[DEFAULT_AESTHETIC];
+}
+
+function applyAesthetic(nextAesthetic, options = { persist: false }) {
+  const normalized = sanitizeAesthetic(nextAesthetic);
+  activeAesthetic = normalized;
+  document.body.dataset.aesthetic = normalized;
+
+  // We swap one stylesheet link so visual language switches without touching render/data logic.
+  if (themeStylesheetElement) {
+    const targetHref = AESTHETIC_STYLESHEETS[normalized] || AESTHETIC_STYLESHEETS[DEFAULT_AESTHETIC];
+    if (themeStylesheetElement.getAttribute("href") !== targetHref) {
+      themeStylesheetElement.setAttribute("href", targetHref);
+    }
+  }
+
+  if (aestheticToggleButton && aestheticToggleLabel) {
+    const nextLabelAesthetic = getNextAesthetic(normalized);
+    const currentLabel = getAestheticLabel(normalized);
+    const nextLabel = getAestheticLabel(nextLabelAesthetic);
+
+    aestheticToggleLabel.textContent = `Aesthetic: ${currentLabel}`;
+
+    const actionLabel = `Current aesthetic: ${currentLabel}. Click to switch to ${nextLabel}.`;
+    aestheticToggleButton.title = actionLabel;
+    aestheticToggleButton.setAttribute("aria-label", actionLabel);
+  }
+
+  if (options.persist) {
+    saveAestheticPref(normalized).catch((error) => {
+      console.warn("Ops Map: failed to save aesthetic preference.", error);
+    });
+  }
 }
 
 function applyDevicePrefs(nextPrefs) {
@@ -1125,6 +1187,13 @@ function bindGlobalEvents() {
     googleSyncButton.addEventListener("click", openGoogleSyncPanel);
   }
 
+  if (aestheticToggleButton) {
+    aestheticToggleButton.addEventListener("click", () => {
+      // Aesthetic switching is immediate and UI-only, then persisted to synced preferences.
+      applyAesthetic(getNextAesthetic(activeAesthetic), { persist: true });
+    });
+  }
+
   window.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       closePanel();
@@ -1147,11 +1216,16 @@ function bindGlobalEvents() {
 }
 
 async function initialize() {
-  const [loadedState, loadedDevicePrefs] = await Promise.all([loadState(), loadDevicePrefs()]);
+  const [loadedState, loadedDevicePrefs, loadedAesthetic] = await Promise.all([
+    loadState(),
+    loadDevicePrefs(),
+    loadAestheticPref()
+  ]);
 
   // Sidebar defaults to collapsed so the board owns first visual focus on every new tab.
   applySidebarCollapsedState(true);
   applyDevicePrefs(loadedDevicePrefs || DEFAULT_DEVICE_PREFS);
+  applyAesthetic(loadedAesthetic || DEFAULT_AESTHETIC);
   bindGlobalEvents();
 
   applyState(normalizeState(loadedState || createEmptyState()), { persist: false });
@@ -1171,9 +1245,14 @@ async function initialize() {
     applyDevicePrefs(incomingPrefs || DEFAULT_DEVICE_PREFS);
   });
 
+  unsubscribeAestheticPrefs = subscribeToAestheticPrefChanges((incomingAesthetic) => {
+    applyAesthetic(incomingAesthetic || DEFAULT_AESTHETIC);
+  });
+
   window.addEventListener("beforeunload", () => {
     unsubscribeStorage?.();
     unsubscribeDevicePrefs?.();
+    unsubscribeAestheticPrefs?.();
   });
 }
 

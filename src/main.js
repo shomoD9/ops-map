@@ -16,6 +16,7 @@ import {
   normalizeState,
   addCampaign,
   renameCampaign,
+  moveCampaign,
   updateCampaignMission,
   deleteCampaign,
   addProject,
@@ -85,6 +86,11 @@ let unsubscribeStorage = null;
 let unsubscribeDevicePrefs = null;
 let unsubscribeAestheticPrefs = null;
 let isSidebarCollapsed = false;
+let dragCampaignId = null;
+let dragPreviewIndex = null;
+let dragPointerId = null;
+let dragPointerOffset = { x: 0, y: 0 };
+let dragGhostElement = null;
 
 const projectTooltipTimers = new WeakMap();
 
@@ -149,6 +155,273 @@ function applySidebarCollapsedState(collapsed) {
   if (sideBarElement) {
     sideBarElement.dataset.collapsed = isSidebarCollapsed ? "true" : "false";
   }
+}
+
+function setCampaignReorderingVisualState(isActive) {
+  document.body.classList.toggle("is-campaign-reordering", Boolean(isActive));
+}
+
+function detachCampaignPointerDragListeners() {
+  window.removeEventListener("pointermove", handleCampaignPointerMove);
+  window.removeEventListener("pointerup", handleCampaignPointerUp);
+  window.removeEventListener("pointercancel", handleCampaignPointerCancel);
+  window.removeEventListener("blur", handleCampaignPointerCancel);
+}
+
+function removeCampaignDragGhost() {
+  if (!dragGhostElement) {
+    return;
+  }
+
+  dragGhostElement.remove();
+  dragGhostElement = null;
+}
+
+function updateCampaignDragGhostPosition(clientX, clientY) {
+  if (!dragGhostElement) {
+    return;
+  }
+
+  dragGhostElement.style.left = `${clientX - dragPointerOffset.x}px`;
+  dragGhostElement.style.top = `${clientY - dragPointerOffset.y}px`;
+}
+
+function createCampaignDragGhost(cardElement, pointerEvent) {
+  const cardBounds = cardElement.getBoundingClientRect();
+  dragPointerOffset = {
+    x: pointerEvent.clientX - cardBounds.left,
+    y: pointerEvent.clientY - cardBounds.top
+  };
+
+  const ghost = cardElement.cloneNode(true);
+  ghost.classList.remove("is-drag-source");
+  ghost.classList.add("campaign-drag-ghost");
+  ghost.style.width = `${cardBounds.width}px`;
+  ghost.style.height = `${cardBounds.height}px`;
+  ghost.style.left = `${cardBounds.left}px`;
+  ghost.style.top = `${cardBounds.top}px`;
+  document.body.append(ghost);
+
+  dragGhostElement = ghost;
+  updateCampaignDragGhostPosition(pointerEvent.clientX, pointerEvent.clientY);
+}
+
+function getNearestCampaignSlotIndex(clientX, clientY) {
+  const slotElements = Array.from(canvasElement.querySelectorAll(".campaign-card"));
+  if (slotElements.length === 0) {
+    return null;
+  }
+
+  let bestSlotIndex = 0;
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  slotElements.forEach((slotElement, slotIndex) => {
+    const bounds = slotElement.getBoundingClientRect();
+    const centerX = bounds.left + bounds.width / 2;
+    const centerY = bounds.top + bounds.height / 2;
+    const distance = (clientX - centerX) ** 2 + (clientY - centerY) ** 2;
+
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestSlotIndex = slotIndex;
+    }
+  });
+
+  return bestSlotIndex;
+}
+
+function buildCampaignsForDragPreview() {
+  if (!dragCampaignId) {
+    return state.campaigns;
+  }
+
+  const sourceIndex = state.campaigns.findIndex((campaign) => campaign.id === dragCampaignId);
+  if (sourceIndex < 0) {
+    return state.campaigns;
+  }
+
+  const campaignsWithoutDragged = state.campaigns.filter((campaign) => campaign.id !== dragCampaignId);
+  const boundedIndex = Number.isFinite(dragPreviewIndex)
+    ? Math.max(0, Math.min(Math.trunc(dragPreviewIndex), campaignsWithoutDragged.length))
+    : sourceIndex;
+  const campaigns = [...campaignsWithoutDragged];
+
+  // During drag, we build a transient order preview so release behavior is visible before drop.
+  campaigns.splice(boundedIndex, 0, state.campaigns[sourceIndex]);
+  return campaigns;
+}
+
+function buildRenderableState() {
+  if (!dragCampaignId) {
+    return state;
+  }
+
+  return {
+    ...state,
+    campaigns: buildCampaignsForDragPreview()
+  };
+}
+
+function beginCampaignDrag(pointerEvent, campaignId, cardElement) {
+  if (pointerEvent.button !== 0) {
+    return;
+  }
+
+  pointerEvent.preventDefault();
+
+  const sourceIndex = state.campaigns.findIndex((campaign) => campaign.id === campaignId);
+  if (sourceIndex < 0) {
+    return;
+  }
+
+  dragCampaignId = campaignId;
+  dragPreviewIndex = sourceIndex;
+  dragPointerId = pointerEvent.pointerId;
+  setCampaignReorderingVisualState(true);
+  createCampaignDragGhost(cardElement, pointerEvent);
+
+  // Pointer listeners stay on window so re-rendering the board does not interrupt the drag session.
+  window.addEventListener("pointermove", handleCampaignPointerMove);
+  window.addEventListener("pointerup", handleCampaignPointerUp);
+  window.addEventListener("pointercancel", handleCampaignPointerCancel);
+  window.addEventListener("blur", handleCampaignPointerCancel);
+
+  window.getSelection()?.removeAllRanges();
+  render();
+}
+
+function updateCampaignPreviewFromPointer(clientX, clientY) {
+  if (!dragCampaignId) {
+    return;
+  }
+
+  const nearestSlotIndex = getNearestCampaignSlotIndex(clientX, clientY);
+  if (nearestSlotIndex === null) {
+    return;
+  }
+
+  const maxCampaignIndex = Math.max(0, state.campaigns.length - 1);
+  const nextPreviewIndex = Math.min(nearestSlotIndex, maxCampaignIndex);
+
+  if (dragPreviewIndex === nextPreviewIndex) {
+    return;
+  }
+
+  dragPreviewIndex = nextPreviewIndex;
+  render();
+}
+
+function finishCampaignDrag(commitDrop) {
+  if (!dragCampaignId) {
+    return;
+  }
+
+  const draggedCampaignId = dragCampaignId;
+  const sourceIndex = state.campaigns.findIndex((campaign) => campaign.id === draggedCampaignId);
+  const targetIndex = Number.isFinite(dragPreviewIndex) ? dragPreviewIndex : sourceIndex;
+
+  detachCampaignPointerDragListeners();
+  removeCampaignDragGhost();
+  setCampaignReorderingVisualState(false);
+
+  dragCampaignId = null;
+  dragPreviewIndex = null;
+  dragPointerId = null;
+  dragPointerOffset = { x: 0, y: 0 };
+
+  if (!commitDrop || sourceIndex < 0) {
+    render();
+    return;
+  }
+
+  const nextState = moveCampaign(state, draggedCampaignId, targetIndex);
+  if (nextState !== state) {
+    applyState(nextState);
+    return;
+  }
+
+  render();
+}
+
+function handleCampaignPointerMove(pointerEvent) {
+  if (!dragCampaignId || pointerEvent.pointerId !== dragPointerId) {
+    return;
+  }
+
+  pointerEvent.preventDefault();
+  updateCampaignDragGhostPosition(pointerEvent.clientX, pointerEvent.clientY);
+  updateCampaignPreviewFromPointer(pointerEvent.clientX, pointerEvent.clientY);
+}
+
+function handleCampaignPointerUp(pointerEvent) {
+  if (!dragCampaignId || pointerEvent.pointerId !== dragPointerId) {
+    return;
+  }
+
+  pointerEvent.preventDefault();
+  finishCampaignDrag(true);
+}
+
+function handleCampaignPointerCancel(pointerEvent) {
+  if (
+    pointerEvent &&
+    typeof pointerEvent.pointerId === "number" &&
+    dragPointerId !== null &&
+    pointerEvent.pointerId !== dragPointerId
+  ) {
+    return;
+  }
+
+  finishCampaignDrag(false);
+}
+
+function captureCampaignCardRects() {
+  const rectangles = new Map();
+
+  canvasElement.querySelectorAll(".campaign-card[data-campaign-id]").forEach((cardElement) => {
+    rectangles.set(cardElement.dataset.campaignId, cardElement.getBoundingClientRect());
+  });
+
+  return rectangles;
+}
+
+function animateCampaignCardReflow(previousRectangles) {
+  if (!previousRectangles || previousRectangles.size === 0) {
+    return;
+  }
+
+  canvasElement.querySelectorAll(".campaign-card[data-campaign-id]").forEach((cardElement) => {
+    const campaignId = cardElement.dataset.campaignId;
+    if (!campaignId || campaignId === dragCampaignId) {
+      return;
+    }
+
+    const previous = previousRectangles.get(campaignId);
+    if (!previous) {
+      return;
+    }
+
+    const next = cardElement.getBoundingClientRect();
+    const deltaX = previous.left - next.left;
+    const deltaY = previous.top - next.top;
+
+    if (Math.abs(deltaX) < 0.5 && Math.abs(deltaY) < 0.5) {
+      return;
+    }
+
+    // We cancel prior animations so rapid pointer movement does not stack stale motion instructions.
+    cardElement.getAnimations().forEach((animation) => animation.cancel());
+    cardElement.animate(
+      [
+        { transform: `translate(${deltaX}px, ${deltaY}px)` },
+        { transform: "translate(0, 0)" }
+      ],
+      {
+        duration: 180,
+        easing: "cubic-bezier(0.22, 0.7, 0.18, 1)"
+      }
+    );
+  });
 }
 
 function scheduleStateSave() {
@@ -808,6 +1081,32 @@ function buildProjectEditGlyph() {
   return svg;
 }
 
+function buildCampaignDragGlyph() {
+  const namespace = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(namespace, "svg");
+  svg.classList.add("campaign-drag-glyph");
+  svg.setAttribute("viewBox", "0 0 16 16");
+  svg.setAttribute("aria-hidden", "true");
+
+  // Six dots read as a standard "grip" affordance without adding label text in the header.
+  [
+    [5, 4],
+    [11, 4],
+    [5, 8],
+    [11, 8],
+    [5, 12],
+    [11, 12]
+  ].forEach(([cx, cy]) => {
+    const dot = document.createElementNS(namespace, "circle");
+    dot.setAttribute("cx", String(cx));
+    dot.setAttribute("cy", String(cy));
+    dot.setAttribute("r", "1.15");
+    svg.append(dot);
+  });
+
+  return svg;
+}
+
 function renderProjectRow(project) {
   const row = document.createElement("div");
   row.className = "campaign-project-row";
@@ -849,6 +1148,11 @@ function renderProjectRow(project) {
 function renderCampaignCard(campaign, projects) {
   const article = document.createElement("article");
   article.className = "campaign-card";
+  article.dataset.campaignId = campaign.id;
+
+  if (dragCampaignId === campaign.id) {
+    article.classList.add("is-drag-source");
+  }
 
   const header = document.createElement("div");
   header.className = "campaign-card-header";
@@ -875,6 +1179,16 @@ function renderCampaignCard(campaign, projects) {
   const headerActions = document.createElement("div");
   headerActions.className = "campaign-header-actions";
 
+  const dragHandle = document.createElement("button");
+  dragHandle.type = "button";
+  dragHandle.className = "campaign-drag-handle";
+  dragHandle.setAttribute("aria-label", `Drag to reorder campaign ${campaign.name}`);
+  dragHandle.title = `Drag to reorder ${campaign.name}. Move it where it feels right and release to snap.`;
+  dragHandle.append(buildCampaignDragGlyph());
+  dragHandle.addEventListener("pointerdown", (event) => {
+    beginCampaignDrag(event, campaign.id, article);
+  });
+
   const deleteButton = document.createElement("button");
   deleteButton.type = "button";
   deleteButton.className = "campaign-delete";
@@ -888,7 +1202,7 @@ function renderCampaignCard(campaign, projects) {
     applyState(deleteCampaign(state, campaign.id));
   });
 
-  headerActions.append(deleteButton);
+  headerActions.append(dragHandle, deleteButton);
   header.append(title, headerActions);
 
   const missionSection = document.createElement("section");
@@ -1018,10 +1332,13 @@ function syncSidebarActionStates() {
 }
 
 function render() {
+  const previousCampaignRectangles = captureCampaignCardRects();
   canvasElement.innerHTML = "";
+  canvasElement.classList.toggle("is-campaign-reordering", Boolean(dragCampaignId));
 
-  const slots = buildCampaignSlots(state, MAX_CAMPAIGN_SLOTS);
-  const projectsByCampaign = buildProjectsByCampaign(state, MAX_CAMPAIGN_SLOTS);
+  const renderState = buildRenderableState();
+  const slots = buildCampaignSlots(renderState, MAX_CAMPAIGN_SLOTS);
+  const projectsByCampaign = buildProjectsByCampaign(renderState, MAX_CAMPAIGN_SLOTS);
 
   // Rendering all six slots keeps the board calm and predictable at every campaign count.
   slots.forEach((slot) => {
@@ -1036,6 +1353,7 @@ function render() {
 
   renderSummary();
   syncSidebarActionStates();
+  animateCampaignCardReflow(previousCampaignRectangles);
 }
 
 function bindGlobalEvents() {
@@ -1080,6 +1398,11 @@ function bindGlobalEvents() {
 
   window.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
+      if (dragCampaignId) {
+        finishCampaignDrag(false);
+        return;
+      }
+
       closePanel();
     }
   });

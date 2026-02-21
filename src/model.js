@@ -372,6 +372,28 @@ export function renameCampaign(state, campaignId, nextName) {
   return didChange ? withUpdatedStamp({ ...state, campaigns }) : state;
 }
 
+export function moveCampaign(state, campaignId, targetIndexInput) {
+  const sourceIndex = state.campaigns.findIndex((campaign) => campaign.id === campaignId);
+  if (sourceIndex < 0) {
+    return state;
+  }
+
+  const targetIndexCandidate = Number.isFinite(targetIndexInput) ? Math.trunc(targetIndexInput) : sourceIndex;
+  const targetIndex = Math.min(Math.max(targetIndexCandidate, 0), state.campaigns.length - 1);
+
+  if (targetIndex === sourceIndex) {
+    return state;
+  }
+
+  const campaigns = [...state.campaigns];
+  const [movedCampaign] = campaigns.splice(sourceIndex, 1);
+
+  // We reinsert by index so board slot order becomes an explicit user-priority signal.
+  campaigns.splice(targetIndex, 0, movedCampaign);
+
+  return withUpdatedStamp({ ...state, campaigns });
+}
+
 export function updateCampaignColor(state, campaignId, nextColor) {
   let didChange = false;
 

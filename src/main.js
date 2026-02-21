@@ -32,10 +32,8 @@ import {
 import { loadState, saveState, subscribeToStateChanges } from "./storage.js";
 import {
   loadDevicePrefs,
-  saveDevicePrefs,
   subscribeToDevicePrefsChanges,
-  DEFAULT_DEVICE_PREFS,
-  WEB_BROWSER_TARGETS
+  DEFAULT_DEVICE_PREFS
 } from "./devicePrefs.js";
 import {
   buildExportPayload,
@@ -52,8 +50,6 @@ const summaryElement = document.querySelector("#state-summary");
 const panelRootElement = document.querySelector("#panel-root");
 const addCampaignButton = document.querySelector("#add-campaign-button");
 const addProjectButton = document.querySelector("#add-project-button");
-const browserTargetButton = document.querySelector("#browser-target-button");
-const browserTargetLabel = document.querySelector("#browser-target-label");
 const exportDataButton = document.querySelector("#export-data-button");
 const importDataButton = document.querySelector("#import-data-button");
 const googleSyncButton = document.querySelector("#google-sync-button");
@@ -93,32 +89,11 @@ function closeFloatingUi() {
   closeMissionMenus();
 }
 
-function formatWebBrowserTargetLabel(target) {
-  return sanitizeWebBrowserTarget(target) === WEB_BROWSER_TARGETS.EDGE ? "Edge (best effort)" : "Current Browser";
-}
-
-function sanitizeWebBrowserTarget(target) {
-  return target === WEB_BROWSER_TARGETS.EDGE ? WEB_BROWSER_TARGETS.EDGE : WEB_BROWSER_TARGETS.CURRENT;
-}
-
 function applyDevicePrefs(nextPrefs) {
-  // Device preferences are always merged with defaults so partial payloads stay safe.
   devicePrefs = {
     ...DEFAULT_DEVICE_PREFS,
-    ...(nextPrefs || {}),
-    webBrowserTarget: sanitizeWebBrowserTarget(nextPrefs?.webBrowserTarget)
+    ...(nextPrefs || {})
   };
-
-  // Sidebar text mirrors the active in-memory preference for quick one-click switching.
-  if (browserTargetLabel) {
-    browserTargetLabel.textContent = `Web: ${formatWebBrowserTargetLabel(devicePrefs.webBrowserTarget)}`;
-  }
-
-  if (browserTargetButton) {
-    const helper = formatWebBrowserTargetLabel(devicePrefs.webBrowserTarget);
-    browserTargetButton.title = `Web opens in ${helper}. Click to switch target.`;
-    browserTargetButton.setAttribute("aria-label", browserTargetButton.title);
-  }
 }
 
 function applySidebarCollapsedState(collapsed) {
@@ -503,22 +478,7 @@ function showProjectTooltip(projectNode, message) {
 }
 
 function openWebLink(link) {
-  // Current browser mode is the lowest-friction default for standard web links.
-  if (sanitizeWebBrowserTarget(devicePrefs.webBrowserTarget) === WEB_BROWSER_TARGETS.CURRENT) {
-    window.open(link, "_blank", "noopener,noreferrer");
-    return;
-  }
-
-  // Edge routing depends on protocol handler support, so we keep a safe fallback.
-  try {
-    const edgeTarget = `microsoft-edge:${link}`;
-    const opened = window.open(edgeTarget, "_blank", "noopener,noreferrer");
-    if (!opened) {
-      window.open(link, "_blank", "noopener,noreferrer");
-    }
-  } catch (error) {
-    window.open(link, "_blank", "noopener,noreferrer");
-  }
+  window.open(link, "_blank", "noopener,noreferrer");
 }
 
 function launchProject(project, projectNode) {
@@ -1163,26 +1123,6 @@ function bindGlobalEvents() {
 
   if (googleSyncButton) {
     googleSyncButton.addEventListener("click", openGoogleSyncPanel);
-  }
-
-  if (browserTargetButton) {
-    browserTargetButton.addEventListener("click", async () => {
-      const currentTarget = sanitizeWebBrowserTarget(devicePrefs.webBrowserTarget);
-      const toggledTarget =
-        currentTarget === WEB_BROWSER_TARGETS.CURRENT ? WEB_BROWSER_TARGETS.EDGE : WEB_BROWSER_TARGETS.CURRENT;
-      const nextPrefs = {
-        ...devicePrefs,
-        webBrowserTarget: toggledTarget
-      };
-
-      applyDevicePrefs(nextPrefs);
-
-      try {
-        await saveDevicePrefs(nextPrefs);
-      } catch (error) {
-        console.warn("Ops Map: failed to save local device preferences.", error);
-      }
-    });
   }
 
   window.addEventListener("keydown", (event) => {

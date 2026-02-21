@@ -59,6 +59,8 @@ stays intact with the current icon markup.
   --color-action-highlight-strong: rgba(138, 123, 84, 0.3);
   --color-project-highlight: rgba(201, 175, 110, 0.24);
   --color-project-highlight-strong: rgba(201, 175, 110, 0.33);
+  --project-motion-duration: 140ms;
+  --project-motion-ease: ease-out;
 
   --radius-s: 4px;
   --radius-m: 6px;
@@ -193,6 +195,7 @@ body.is-sidebar-collapsed #app-shell {
   font-weight: 700;
   line-height: 1.05;
   letter-spacing: 0.02em;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
   color: var(--color-accent);
 }
 
@@ -408,6 +411,28 @@ body.is-sidebar-collapsed .sidebar-toggle {
   padding: 6px 2px 20px;
 }
 
+/* Board and panel share one scrollbar treatment so both overflow paths feel intentionally matched. */
+#canvas::-webkit-scrollbar,
+#panel-root::-webkit-scrollbar {
+  width: 5px;
+}
+
+#canvas::-webkit-scrollbar-track,
+#panel-root::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#canvas::-webkit-scrollbar-thumb,
+#panel-root::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+#canvas::-webkit-scrollbar-thumb:hover,
+#panel-root::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
 .campaign-card {
   position: relative;
   border-radius: var(--radius-l);
@@ -418,7 +443,9 @@ body.is-sidebar-collapsed .sidebar-toggle {
   flex-direction: column;
   gap: 10px;
   min-height: 200px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  /* Vanilla keeps its linework but gains the same gentle depth rhythm used by the other mood. */
+  box-shadow: 0 7px 16px rgba(0, 0, 0, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.62);
+  transition: box-shadow 200ms ease, transform 200ms ease;
   /* Explicit content-sized height prevents grid stretch behavior from hiding overflow growth. */
   height: max-content;
   align-self: start;
@@ -452,6 +479,12 @@ body.is-sidebar-collapsed .sidebar-toggle {
   z-index: 1;
 }
 
+.campaign-card:hover {
+  box-shadow: 0 13px 28px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.16);
+  transform: translateY(-2px);
+  z-index: 2;
+}
+
 .campaign-card-header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -468,6 +501,7 @@ body.is-sidebar-collapsed .sidebar-toggle {
   font-weight: 700;
   line-height: 1.1;
   letter-spacing: -0.01em;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8), 0 2px 5px rgba(0, 0, 0, 0.08);
   color: var(--color-accent);
   user-select: text;
   cursor: text;
@@ -577,11 +611,13 @@ body.is-sidebar-collapsed .sidebar-toggle {
   font-weight: 600;
   line-height: 1;
   border-radius: var(--radius-s);
-  transition: background-color 120ms ease;
+  opacity: 0.76;
+  transition: background-color var(--project-motion-duration) var(--project-motion-ease), opacity var(--project-motion-duration) var(--project-motion-ease);
 }
 
 .projects-add-icon:hover:not(:disabled) {
   background: rgba(0, 0, 0, 0.09);
+  opacity: 1;
   border-color: transparent;
 }
 
@@ -609,6 +645,12 @@ body.is-sidebar-collapsed .sidebar-toggle {
 /* Each project entry stays compact and textual, with edit control nearby but not dominant. */
 .campaign-project-row {
   position: relative;
+  border-radius: var(--radius-s);
+  transition: background-color var(--project-motion-duration) var(--project-motion-ease);
+}
+
+.campaign-project-row:hover {
+  background: rgba(0, 0, 0, 0.04);
 }
 
 .project-launch {
@@ -620,14 +662,16 @@ body.is-sidebar-collapsed .sidebar-toggle {
   padding-top: 5px;
   padding-bottom: 5px;
   text-align: left;
+  color: var(--color-accent);
   font-size: 0.95rem;
   font-weight: 500;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
   line-height: 1.4;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   background: transparent;
-  transition: transform 120ms ease;
+  transition: transform var(--project-motion-duration) var(--project-motion-ease), color var(--project-motion-duration) var(--project-motion-ease);
 }
 
 /* Project chips are rendered as highlighter strokes so they feel textual, not button-box UI. */
@@ -651,8 +695,13 @@ body.is-sidebar-collapsed .sidebar-toggle {
   background: var(--color-project-highlight-strong);
 }
 
+.project-launch:hover,
+.project-launch:focus-visible {
+  transform: translateY(-0.5px);
+}
+
 .project-launch:active {
-  transform: translateY(0.5px);
+  transform: translateY(0);
 }
 
 .project-launch.is-physical {
@@ -691,13 +740,20 @@ body.is-sidebar-collapsed .sidebar-toggle {
   align-items: center;
   justify-content: center;
   color: var(--color-accent);
-  background: transparent;
+  background: rgba(0, 0, 0, 0.03);
   border-radius: var(--radius-s);
-  transition: background-color 120ms ease;
+  opacity: 0.72;
+  transition: background-color var(--project-motion-duration) var(--project-motion-ease), opacity var(--project-motion-duration) var(--project-motion-ease);
+}
+
+.campaign-project-row:hover .project-edit-icon,
+.project-edit-icon:focus-visible {
+  opacity: 0.95;
 }
 
 .project-edit-icon:hover:not(:disabled) {
   background: rgba(0, 0, 0, 0.1);
+  opacity: 1;
   border-color: transparent;
 }
 
@@ -749,6 +805,13 @@ body.is-sidebar-collapsed .sidebar-toggle {
   border: 1px solid var(--color-line-strong);
   background: var(--color-paper);
   padding: var(--space-4);
+  /* This keeps the vanilla panel flat in color but gives it the same subtle floating depth as bhadralok. */
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.14), 0 0 1px rgba(0, 0, 0, 0.22);
+  /* We constrain panel height to the visible viewport so long forms scroll internally instead of clipping above the window. */
+  max-height: calc(100vh - 20px);
+  max-height: calc(100dvh - 20px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 #panel-root[hidden] {

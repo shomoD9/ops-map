@@ -1,5 +1,5 @@
 /*
-This file is the persistence boundary for Ops Map.
+This file is the persistence boundary for Return.
 It exists separately so the rest of the app can think in plain state objects while this module hides
 whether data comes from `chrome.storage.sync` or a localStorage fallback during non-extension development.
 It talks outward to browser storage APIs and inward to `src/main.js`, which calls these functions whenever state loads or changes.
@@ -22,7 +22,7 @@ export async function loadState() {
     return new Promise((resolve) => {
       chrome.storage.sync.get([STORAGE_KEY], (result) => {
         if (chrome.runtime?.lastError) {
-          console.warn("Ops Map: failed to read sync storage.", getRuntimeErrorMessage());
+          console.warn("Return: failed to read sync storage.", getRuntimeErrorMessage());
           resolve(null);
           return;
         }
@@ -37,7 +37,7 @@ export async function loadState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch (error) {
-    console.warn("Ops Map: failed to read local fallback storage.", error);
+    console.warn("Return: failed to read local fallback storage.", error);
     return null;
   }
 }
@@ -59,7 +59,7 @@ export async function saveState(state) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (error) {
-    console.warn("Ops Map: failed to save local fallback storage.", error);
+    console.warn("Return: failed to save local fallback storage.", error);
   }
 }
 
@@ -88,7 +88,7 @@ export function subscribeToStateChanges(onChange) {
     try {
       onChange(event.newValue ? JSON.parse(event.newValue) : null);
     } catch (error) {
-      console.warn("Ops Map: failed to parse storage event payload.", error);
+      console.warn("Return: failed to parse storage event payload.", error);
     }
   };
 

@@ -1,7 +1,7 @@
-# Ops Map — Agent Briefing
+# Return — Agent Briefing
 
 ## What This Is
-Ops Map is a Chrome extension that replaces the new tab page with a visual
+Return is a Chrome extension that replaces the new tab page with a visual
 canvas showing the user's active campaigns, projects, and missions. It's a
 context resumption tool — it helps the user instantly recall what they're
 working on and jump straight into it.

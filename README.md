@@ -1,4 +1,4 @@
-# ops-map
+# Return
 
 A Chrome extension that replaces the new tab page with a structured six-section board for campaigns, missions, and projects.
 
@@ -43,10 +43,10 @@ The visual system now follows a monochrome editorial style: off-white paper tone
 
 ## Unpacked Cross-Device Sync
 
-Chrome profile sign-in alone is not enough for extension state to carry over. Chrome sync scopes extension data by extension ID, so both devices must run the same Ops Map extension ID. This repository pins the ID through the `manifest.json` `key` field, which keeps unpacked installs aligned as long as both devices load this same source tree.
+Chrome profile sign-in alone is not enough for extension state to carry over. Chrome sync scopes extension data by extension ID, so both devices must run the same Return extension ID. This repository pins the ID through the `manifest.json` `key` field, which keeps unpacked installs aligned as long as both devices load this same source tree.
 
-To verify alignment, open `chrome://extensions` on each device with Developer mode enabled and compare the Ops Map extension ID. The IDs must be identical. In-app, the `Google Sync` panel now also prints the local extension ID and active storage backend so you can confirm runtime conditions from the new-tab UI.
+To verify alignment, open `chrome://extensions` on each device with Developer mode enabled and compare the Return extension ID. The IDs must be identical. In-app, the `Google Sync` panel now also prints the local extension ID and active storage backend so you can confirm runtime conditions from the new-tab UI.
 
 If you are migrating from older unpacked installs that used different IDs, use this one-time flow: export from the primary device, remove the old unpacked extension on both devices, load this updated repo on both devices, confirm matching IDs, import on the primary device, then let Chrome sync propagate to the secondary device.
 
-Sync timing is eventual rather than instant. Ops Map writes with a short local debounce and then relies on Chrome Sync transport, so cross-device appearance usually lands within seconds but can sometimes take a few minutes.
+Sync timing is eventual rather than instant. Return writes with a short local debounce and then relies on Chrome Sync transport, so cross-device appearance usually lands within seconds but can sometimes take a few minutes.

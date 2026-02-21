@@ -1,5 +1,5 @@
 /*
-This file stores the selected visual aesthetic for Ops Map.
+This file stores the selected visual aesthetic for Return.
 It exists separately from map entities because aesthetic choice is a UI preference and should not
 be mixed into campaign/project domain data or import/export contracts.
 `src/main.js` reads and writes this module, then swaps the stylesheet link at runtime so users can
@@ -32,7 +32,7 @@ export async function loadAestheticPref() {
     return new Promise((resolve) => {
       chrome.storage.sync.get([AESTHETIC_STORAGE_KEY], (result) => {
         if (chrome.runtime?.lastError) {
-          console.warn("Ops Map: failed to read aesthetic preference.", getRuntimeErrorMessage());
+          console.warn("Return: failed to read aesthetic preference.", getRuntimeErrorMessage());
           resolve(DEFAULT_AESTHETIC);
           return;
         }
@@ -45,7 +45,7 @@ export async function loadAestheticPref() {
   try {
     return sanitizeAesthetic(localStorage.getItem(AESTHETIC_STORAGE_KEY));
   } catch (error) {
-    console.warn("Ops Map: failed to read local aesthetic preference fallback.", error);
+    console.warn("Return: failed to read local aesthetic preference fallback.", error);
     return DEFAULT_AESTHETIC;
   }
 }
@@ -69,7 +69,7 @@ export async function saveAestheticPref(aesthetic) {
   try {
     localStorage.setItem(AESTHETIC_STORAGE_KEY, normalized);
   } catch (error) {
-    console.warn("Ops Map: failed to save local aesthetic preference fallback.", error);
+    console.warn("Return: failed to save local aesthetic preference fallback.", error);
   }
 }
 

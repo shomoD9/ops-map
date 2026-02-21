@@ -58,6 +58,9 @@ export const MAX_CAMPAIGNS = 6;
 
 const PROJECT_MODE_KEYS = Object.values(PROJECT_MODES);
 const LINK_TYPE_KEYS = Object.keys(LINK_TYPE_HELP);
+const URL_SCHEME_PATTERN = /^[a-zA-Z][\w+.-]*:\/\//;
+const GOOGLE_PLAY_BOOKS_HOST = "play.google.com";
+const GOOGLE_PLAY_BOOKS_READER_PATH = "/books/reader";
 
 function createId(prefix) {
   // UUID gives stable uniqueness when available, with a deterministic fallback for older contexts.
@@ -110,6 +113,45 @@ function sanitizeColor(color, fallbackIndex) {
   return DEFAULT_CAMPAIGN_COLORS[fallbackIndex % DEFAULT_CAMPAIGN_COLORS.length];
 }
 
+function parseUrlWithOptionalHttps(link) {
+  try {
+    return new URL(link);
+  } catch {
+    // Domain-only input is common in the project editor, so we retry with https:// before giving up.
+    if (URL_SCHEME_PATTERN.test(link)) {
+      return null;
+    }
+  }
+
+  try {
+    return new URL(`https://${link}`);
+  } catch {
+    return null;
+  }
+}
+
+function normalizeGooglePlayBooksReaderLink(link) {
+  const parsed = parseUrlWithOptionalHttps(link);
+  if (!parsed) {
+    return link;
+  }
+
+  const normalizedHost = parsed.hostname.toLowerCase();
+  const normalizedPath = parsed.pathname.replace(/\/+$/, "") || "/";
+
+  if (normalizedHost !== GOOGLE_PLAY_BOOKS_HOST || normalizedPath !== GOOGLE_PLAY_BOOKS_READER_PATH) {
+    return link;
+  }
+
+  if (!parsed.searchParams.has("pg")) {
+    return link;
+  }
+
+  // Google Play Books uses `pg` as a volatile page anchor; removing it restores "resume from last read page" behavior.
+  parsed.searchParams.delete("pg");
+  return parsed.toString();
+}
+
 export function normalizeProjectLink(link, linkType) {
   const trimmed = cleanText(link);
 
@@ -117,12 +159,14 @@ export function normalizeProjectLink(link, linkType) {
     return "";
   }
 
+  let normalized = trimmed;
+
   // Web links are the only case where implicit https:// is useful in v1.
-  if (linkType === "web" && !/^[a-zA-Z][\w+.-]*:\/\//.test(trimmed)) {
-    return `https://${trimmed}`;
+  if (linkType === "web" && !URL_SCHEME_PATTERN.test(normalized)) {
+    normalized = `https://${normalized}`;
   }
 
-  return trimmed;
+  return normalizeGooglePlayBooksReaderLink(normalized);
 }
 
 export function buildLinkFromHelper(linkType, helperInput) {

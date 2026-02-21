@@ -1,5 +1,5 @@
 /*
-This file is the runtime coordinator for Ops Map's new-tab board.
+This file is the runtime coordinator for Return's new-tab board.
 It exists as a separate module because it is the integration layer that connects domain mutations,
 persistence, and DOM rendering into one interactive experience.
 It imports domain rules from `src/model.js`, board-shaping helpers from `src/layout.js`,
@@ -123,7 +123,7 @@ function applyAesthetic(nextAesthetic, options = { persist: false }) {
 
   if (options.persist) {
     saveAestheticPref(normalized).catch((error) => {
-      console.warn("Ops Map: failed to save aesthetic preference.", error);
+      console.warn("Return: failed to save aesthetic preference.", error);
     });
   }
 }
@@ -159,7 +159,7 @@ function scheduleStateSave() {
     try {
       await saveState(state);
     } catch (error) {
-      console.warn("Ops Map: failed to save state.", error);
+      console.warn("Return: failed to save state.", error);
     }
   }, SAVE_DEBOUNCE_MS);
 }
@@ -308,7 +308,7 @@ function exportStateToFile() {
     const serialized = serializeExportPayload(payload);
     triggerJsonDownload(suggestExportFileName(), serialized);
   } catch (error) {
-    openInfoPanel("Export Failed", "Ops Map could not export data right now. Try again.");
+    openInfoPanel("Export Failed", "Return could not export data right now. Try again.");
   }
 }
 
@@ -327,7 +327,7 @@ function openImportConfirmationPanel(importSourceLabel, incomingState) {
 
   const warningBody = document.createElement("p");
   warningBody.textContent =
-    "Campaigns, projects, missions, and layout data from the import file will overwrite your current Ops Map data.";
+    "Campaigns, projects, missions, and layout data from the import file will overwrite your current Return data.";
 
   warningCallout.append(warningTitle, warningBody);
 
@@ -405,7 +405,7 @@ function openGoogleSyncPanel() {
   const guidance = document.createElement("p");
   guidance.className = "panel-note";
   guidance.textContent =
-    "For cross-browser transfer today, export data from one Ops Map instance and import it in the other browser/device.";
+    "For cross-browser transfer today, export data from one Return instance and import it in the other browser/device.";
 
   const diagnosticsTitle = document.createElement("p");
   diagnosticsTitle.className = "panel-note";
@@ -457,7 +457,7 @@ function openGoogleSyncPanel() {
 
 function openCampaignEditor() {
   if (state.campaigns.length >= MAX_CAMPAIGNS) {
-    openInfoPanel("Campaign Limit Reached", `Ops Map currently supports up to ${MAX_CAMPAIGNS} campaigns.`);
+    openInfoPanel("Campaign Limit Reached", `Return currently supports up to ${MAX_CAMPAIGNS} campaigns.`);
     return;
   }
 

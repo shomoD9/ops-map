@@ -30,7 +30,6 @@ Open a new Chrome tab, and instead of the default page, I see:
 - My **campaigns** as overlapping regions on a canvas
 - My **projects** as clickable nodes inside those regions
 - The **current mission** for each campaign — where I'm headed
-- The **previous mission** — where I've been
 
 Every project is a launchpad. One click takes me straight to where the work
 lives — my IDE, Obsidian, Google Docs, whatever.
@@ -64,10 +63,8 @@ Each campaign has one current mission — the immediate goal that all projects
 in that campaign are working toward. "Finish novella first draft." "Ship
 Slopinator V1." "Complete React fundamentals."
 
-When the mission is updated, the old one automatically becomes the "previous
-mission." This is how history writes itself — the only maintenance is
-updating what you're aiming at, and the record of where you've been emerges
-for free.
+The mission field stays intentionally lightweight: update it when direction
+shifts, or clear it when that campaign is between goals.
 
 ## How the Map Stays Current
 
@@ -75,8 +72,8 @@ This is the critical design constraint. Every previous tool died because
 maintaining it was a chore. The map must not become another thing to manage.
 
 In V1, the only regular action is updating a campaign's mission when the goal
-shifts. Everything else — history, context — writes itself from that single
-action.
+shifts. Keeping that action inline and low-friction is how the map stays
+current in daily use.
 
 In future versions, the map gets smarter: it reads git commits to detect what
 was worked on last, proactively surfaces context, and reduces manual input

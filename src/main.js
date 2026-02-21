@@ -6,8 +6,8 @@ It imports domain rules from `src/model.js`, board-shaping helpers from `src/lay
 storage adapters from `src/storage.js`, local preference adapters from `src/devicePrefs.js`,
 shared aesthetic preference adapters from `src/aestheticPrefs.js`, and transfer/google-sync
 scaffolding from `src/transfer.js` and `src/googleSync.js`.
-It also coordinates lightweight floating controls (mission menu) and sidebar preference toggles
-so the interface stays compact without losing keyboard and pointer clarity.
+It also coordinates sidebar preference toggles so the interface stays compact
+without losing keyboard and pointer clarity.
 */
 
 import { buildCampaignSlots, buildProjectsByCampaign, MAX_CAMPAIGN_SLOTS } from "./layout.js";
@@ -17,8 +17,6 @@ import {
   addCampaign,
   renameCampaign,
   updateCampaignMission,
-  completeCampaignMission,
-  clearCampaignMissionHistory,
   deleteCampaign,
   addProject,
   updateProject,
@@ -89,27 +87,6 @@ let unsubscribeAestheticPrefs = null;
 let isSidebarCollapsed = false;
 
 const projectTooltipTimers = new WeakMap();
-
-function setMissionMenuOpenState(menuElement, triggerElement, isOpen) {
-  menuElement.dataset.open = isOpen ? "true" : "false";
-  triggerElement.setAttribute("aria-expanded", isOpen ? "true" : "false");
-}
-
-function closeMissionMenus() {
-  // Mission menus are lightweight overlays, so we close all of them in one pass.
-  document.querySelectorAll(".mission-menu").forEach((menuElement) => {
-    menuElement.dataset.open = "false";
-  });
-
-  document.querySelectorAll(".mission-menu-trigger").forEach((triggerElement) => {
-    triggerElement.setAttribute("aria-expanded", "false");
-  });
-}
-
-function closeFloatingUi() {
-  // All lightweight overlays close together so global interactions remain predictable.
-  closeMissionMenus();
-}
 
 function getNextAesthetic(currentAesthetic) {
   return sanitizeAesthetic(currentAesthetic) === AESTHETICS.BHADRALOK ? AESTHETICS.VANILLA : AESTHETICS.BHADRALOK;
@@ -199,7 +176,6 @@ function applyState(nextState, options = { persist: true }) {
 }
 
 function closePanel() {
-  closeFloatingUi();
   panelRootElement.hidden = true;
   panelRootElement.innerHTML = "";
 }
@@ -899,80 +875,6 @@ function renderCampaignCard(campaign, projects) {
   const headerActions = document.createElement("div");
   headerActions.className = "campaign-header-actions";
 
-  const missionMenuWrap = document.createElement("div");
-  missionMenuWrap.className = "mission-menu-wrap";
-
-  const missionMenuTrigger = document.createElement("button");
-  missionMenuTrigger.type = "button";
-  missionMenuTrigger.className = "mission-menu-trigger";
-  missionMenuTrigger.textContent = "...";
-  missionMenuTrigger.title = `Mission options for ${campaign.name}`;
-  missionMenuTrigger.setAttribute("aria-label", `Mission options for ${campaign.name}`);
-  missionMenuTrigger.setAttribute("aria-haspopup", "menu");
-  missionMenuTrigger.setAttribute("aria-expanded", "false");
-
-  const missionMenu = document.createElement("div");
-  missionMenu.className = "mission-menu";
-  missionMenu.dataset.open = "false";
-  missionMenu.setAttribute("role", "menu");
-  missionMenu.setAttribute("aria-label", `Mission actions for ${campaign.name}`);
-
-  const readMissionDraft = () => {
-    const draftEditor = article.querySelector(".mission-editor");
-    return draftEditor ? draftEditor.textContent : campaign.currentMission;
-  };
-
-  const markDoneButton = document.createElement("button");
-  markDoneButton.type = "button";
-  markDoneButton.textContent = "Mark Mission Done";
-  markDoneButton.setAttribute("role", "menuitem");
-  markDoneButton.disabled = !campaign.currentMission;
-  markDoneButton.addEventListener("click", () => {
-    // Mission history only rolls forward when the user explicitly marks completion.
-    const stateWithLatestMission = updateCampaignMission(state, campaign.id, readMissionDraft());
-    applyState(completeCampaignMission(stateWithLatestMission, campaign.id));
-    closeMissionMenus();
-  });
-
-  const clearHistoryButton = document.createElement("button");
-  clearHistoryButton.type = "button";
-  clearHistoryButton.textContent = "Clear Mission History";
-  clearHistoryButton.setAttribute("role", "menuitem");
-  clearHistoryButton.disabled = !campaign.previousMission;
-  clearHistoryButton.addEventListener("click", () => {
-    const stateWithLatestMission = updateCampaignMission(state, campaign.id, readMissionDraft());
-    applyState(clearCampaignMissionHistory(stateWithLatestMission, campaign.id));
-    closeMissionMenus();
-  });
-
-  missionMenu.append(markDoneButton, clearHistoryButton);
-  missionMenuWrap.append(missionMenuTrigger, missionMenu);
-
-  missionMenuTrigger.addEventListener("pointerdown", (event) => {
-    // Prevent focus handoff from mission editor to trigger so blur-save re-render never swallows menu clicks.
-    event.preventDefault();
-    event.stopPropagation();
-  });
-
-  missionMenuTrigger.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    const shouldOpen = missionMenu.dataset.open !== "true";
-    closeMissionMenus();
-    setMissionMenuOpenState(missionMenu, missionMenuTrigger, shouldOpen);
-  });
-
-  missionMenu.addEventListener("pointerdown", (event) => {
-    // Keeping pointer interaction local avoids outside-closer races while choosing a mission action.
-    event.preventDefault();
-    event.stopPropagation();
-  });
-
-  missionMenu.addEventListener("click", (event) => {
-    // Menu clicks should not bubble into the global outside-click closer.
-    event.stopPropagation();
-  });
-
   const deleteButton = document.createElement("button");
   deleteButton.type = "button";
   deleteButton.className = "campaign-delete";
@@ -986,12 +888,12 @@ function renderCampaignCard(campaign, projects) {
     applyState(deleteCampaign(state, campaign.id));
   });
 
-  headerActions.append(missionMenuWrap, deleteButton);
+  headerActions.append(deleteButton);
   header.append(title, headerActions);
 
   const missionSection = document.createElement("section");
   missionSection.className = "mission-block";
-  missionSection.title = "Current mission. Click to edit. Use menu for done/history actions.";
+  missionSection.title = "Current mission. Click to edit.";
 
   const missionEditor = document.createElement("div");
   missionEditor.className = "mission-editor";
@@ -1013,29 +915,11 @@ function renderCampaignCard(campaign, projects) {
     }
   });
 
-  missionEditor.addEventListener("blur", (event) => {
-    const nextFocus = event.relatedTarget instanceof Element ? event.relatedTarget : null;
-
-    // Moving focus into the mission menu should not trigger an intermediate re-render.
-    if (nextFocus?.closest(".mission-menu-wrap")) {
-      return;
-    }
-
+  missionEditor.addEventListener("blur", () => {
     applyState(updateCampaignMission(state, campaign.id, missionEditor.textContent));
   });
 
   missionSection.append(missionEditor);
-
-  if (campaign.previousMission) {
-    const previousMission = document.createElement("p");
-    previousMission.className = "previous-mission";
-
-    const prefix = document.createElement("strong");
-    prefix.textContent = "Previous: ";
-
-    previousMission.append(prefix, campaign.previousMission);
-    missionSection.append(previousMission);
-  }
 
   const projectsSection = document.createElement("section");
   projectsSection.className = "projects-block";
@@ -1198,20 +1082,6 @@ function bindGlobalEvents() {
     if (event.key === "Escape") {
       closePanel();
     }
-  });
-
-  window.addEventListener("pointerdown", (event) => {
-    const targetElement = event.target instanceof Element ? event.target : null;
-
-    if (!targetElement) {
-      return;
-    }
-
-    if (targetElement.closest(".mission-menu-wrap")) {
-      return;
-    }
-
-    closeFloatingUi();
   });
 }
 

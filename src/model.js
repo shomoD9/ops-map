@@ -232,8 +232,8 @@ export function normalizeState(rawState) {
             color: sanitizeColor(campaign.color, index),
             x: isFiniteNumber(campaign.x) ? campaign.x : null,
             y: isFiniteNumber(campaign.y) ? campaign.y : null,
-            currentMission: cleanMission(campaign.currentMission),
-            previousMission: cleanMission(campaign.previousMission)
+            // Legacy payloads may still include removed mission-history keys; we intentionally drop them.
+            currentMission: cleanMission(campaign.currentMission)
           };
         })
         .filter(Boolean)
@@ -295,8 +295,7 @@ export function addCampaign(state, campaignDraft) {
     color: sanitizeColor(campaignDraft?.color, state.campaigns.length),
     x: isFiniteNumber(campaignDraft?.x) ? campaignDraft.x : null,
     y: isFiniteNumber(campaignDraft?.y) ? campaignDraft.y : null,
-    currentMission: "",
-    previousMission: ""
+    currentMission: ""
   };
 
   return withUpdatedStamp({
@@ -394,55 +393,9 @@ export function updateCampaignMission(state, campaignId, missionInput) {
     }
 
     didChange = true;
-
-    // Editing current mission text should not rewrite history; history rolls only on explicit completion.
     return {
       ...campaign,
       currentMission: nextMission
-    };
-  });
-
-  return didChange ? withUpdatedStamp({ ...state, campaigns }) : state;
-}
-
-export function completeCampaignMission(state, campaignId) {
-  let didChange = false;
-
-  const campaigns = state.campaigns.map((campaign) => {
-    if (campaign.id !== campaignId) {
-      return campaign;
-    }
-
-    const currentMission = cleanMission(campaign.currentMission);
-    if (!currentMission) {
-      return campaign;
-    }
-
-    didChange = true;
-
-    return {
-      ...campaign,
-      previousMission: currentMission,
-      currentMission: ""
-    };
-  });
-
-  return didChange ? withUpdatedStamp({ ...state, campaigns }) : state;
-}
-
-export function clearCampaignMissionHistory(state, campaignId) {
-  let didChange = false;
-
-  const campaigns = state.campaigns.map((campaign) => {
-    if (campaign.id !== campaignId || !campaign.previousMission) {
-      return campaign;
-    }
-
-    didChange = true;
-
-    return {
-      ...campaign,
-      previousMission: ""
     };
   });
 

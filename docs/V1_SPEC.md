@@ -23,7 +23,6 @@ Examples: "Fiction Writing," "Building," "Learning to Code," "Job Search."
 - Has a name
 - Has a color or visual identity (to distinguish regions on the canvas)
 - Has a current mission (the immediate next goal for this campaign)
-- Has a previous mission (auto-set when the current mission is updated)
 - Represented visually as a region on the canvas
 - Campaigns can overlap when they share projects
 - Expected count: 3–5 at any time
@@ -45,9 +44,8 @@ Examples: "Slopinator," "Novella," "React Course," "PM Job Applications."
 The immediate next goal for a campaign. One per campaign at a time.
 
 - Free-text, short (a sentence or two)
-- When updated, the previous value automatically moves to "previous mission"
 - A campaign may not have a mission set yet — it just doesn't show one
-- V1 only tracks current and previous (one step of history)
+- V1 tracks only one mission value per campaign (the current one)
 
 ## What the User Sees
 
@@ -58,9 +56,8 @@ On the canvas:
 - Campaigns appear as labeled regions — overlapping circles or organic shapes
   (Venn diagram model)
 - Projects appear as labeled, clickable nodes inside their campaign region(s)
-- Each campaign displays its name, current mission (if set), and previous
-  mission (if exists) — the mission text should be visible on or near the
-  campaign region
+- Each campaign displays its name and current mission (if set) — the mission
+  text should be visible on or near the campaign region
 - The layout is spatial and glanceable — I should be able to take in the state
   of everything in 2–3 seconds
 
@@ -92,7 +89,6 @@ All editing happens inline on the canvas. No separate "settings page" or
 **Missions:**
 - Set or update a campaign's current mission (inline edit, directly on the
   canvas)
-- When updated, the previous mission auto-populates from the old value
 - Clear a mission (resets to "no mission set")
 - The canvas should make it obvious when a campaign has no mission set —
   a gentle prompt like "What's the next mission?" encourages the user to set
@@ -122,7 +118,7 @@ flows.
 - No import/export
 - No collaboration features
 - No mobile support
-- No mission history beyond one previous entry
+- No built-in mission history timeline
 
 ## Success Criteria
 

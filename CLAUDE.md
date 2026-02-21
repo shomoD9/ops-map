@@ -12,13 +12,13 @@ work like fiction writing, building software, learning) with projects inside
 each. The user needs to resume context quickly after breaks.
 
 ## Core Concepts
-- **Campaign**: A high-level theme of work. Has a name, a current mission, and
-  a previous mission. Visualized as a region on a canvas. 3-5 at a time.
+- **Campaign**: A high-level theme of work. Has a name and one current mission.
+  Visualized as a region on a canvas. 3-5 at a time.
 - **Project**: A specific piece of work inside one or more campaigns. Has a name
   and a link (URL or app URI). Clickable — opens where the work lives.
   Visualized as a node inside campaign regions.
-- **Mission**: One per campaign. A short free-text goal. When updated, the old
-  mission becomes the "previous mission" automatically.
+- **Mission**: One per campaign. A short free-text goal that can be updated or
+  cleared inline on the canvas.
 
 ## How It Should Feel
 - **Instant.** The canvas loads in under a second on new tab.

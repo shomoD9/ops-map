@@ -100,6 +100,20 @@ body {
   overflow: hidden;
 }
 
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(100, 80, 40, 0.04) 100%);
+  pointer-events: none;
+  z-index: 999;
+}
+
+::selection {
+  background: rgba(185, 160, 95, 0.3);
+  color: var(--color-ink);
+}
+
 #app-shell {
   width: 100%;
   height: 100%;
@@ -194,6 +208,8 @@ body.is-sidebar-collapsed #app-shell {
   line-height: 1.05;
   letter-spacing: 0.02em;
   color: var(--color-accent);
+  padding-bottom: 3px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
 }
 
 .brand-block p {
@@ -389,6 +405,30 @@ body.is-sidebar-collapsed .sidebar-toggle {
   overflow-x: hidden;
   overflow-y: auto;
   padding: 6px 2px 20px;
+  background-image: linear-gradient(
+    to right,
+    transparent calc(50% - 0.5px),
+    rgba(0, 0, 0, 0.06) calc(50% - 0.5px),
+    rgba(0, 0, 0, 0.06) calc(50% + 0.5px),
+    transparent calc(50% + 0.5px)
+  );
+}
+
+#canvas::-webkit-scrollbar {
+  width: 5px;
+}
+
+#canvas::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#canvas::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 3px;
+}
+
+#canvas::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.22);
 }
 
 .campaign-card {
@@ -402,6 +442,7 @@ body.is-sidebar-collapsed .sidebar-toggle {
   gap: 10px;
   min-height: 200px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 200ms ease, transform 200ms ease;
   /* Explicit content-sized height prevents grid stretch behavior from hiding overflow growth. */
   height: max-content;
   align-self: start;
@@ -433,6 +474,12 @@ body.is-sidebar-collapsed .sidebar-toggle {
 .campaign-card > * {
   position: relative;
   z-index: 1;
+}
+
+.campaign-card:hover {
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.07);
+  transform: translateY(-1px);
+  z-index: 2;
 }
 
 .campaign-card-header {
@@ -794,6 +841,7 @@ body.is-sidebar-collapsed .sidebar-toggle {
   border: 1px solid var(--color-line-strong);
   background: var(--color-paper);
   padding: var(--space-4);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
 #panel-root[hidden] {

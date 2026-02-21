@@ -1,11 +1,11 @@
 /*
-This stylesheet defines Ops Map's editorial design system.
+This stylesheet defines Ops Map's bhadralok gothic design system.
 It exists separately from behavior code so typography, spacing, and visual hierarchy can evolve
 without changing domain logic in JavaScript.
-It styles the shell in `newtab.html` and class hooks emitted by `src/main.js`, now using a monochrome
-off-white/black palette, Garamond typography, and hand-drawn-like campaign borders.
-The sidebar uses a matching sketch-frame treatment with icon-forward actions that stay readable when expanded
-and collapse to monochrome symbols for fast repeat usage.
+It styles the shell in `newtab.html` and class hooks emitted by `src/main.js`, using a parchment-forward
+palette with deep ink text, monumental serif hierarchy, and softly irregular structural seams.
+The atmosphere evokes old Calcutta study rooms and print-era desks, where paper stays warm and bright
+while language appears in high-contrast dark strokes.
 */
 
 @font-face {
@@ -45,20 +45,27 @@ and collapse to monochrome symbols for fast repeat usage.
   --font-body: "Newsreader", "Garamond", "EB Garamond", "Adobe Garamond Pro", "Times New Roman", serif;
   --font-ui: "IBM Plex Sans", -apple-system, system-ui, sans-serif;
 
-  --color-paper: #f9f8f5;
-  --color-paper-alt: #f4f3f0;
-  --color-surface: #f7f6f3;
-  --color-ink: #121212;
-  --color-ink-muted: #484340;
-  --color-accent: #111111;
-  --color-accent-soft: #eceae6;
-  --color-line: #161616;
-  --color-line-strong: #111111;
-  --color-line-soft: rgba(80, 60, 30, 0.16);
-  --color-action-highlight: rgba(138, 123, 84, 0.2);
-  --color-action-highlight-strong: rgba(138, 123, 84, 0.3);
-  --color-project-highlight: rgba(201, 175, 110, 0.24);
-  --color-project-highlight-strong: rgba(201, 175, 110, 0.33);
+  /* Palette is intentionally inverted so text remains darker than every working surface. */
+  --color-paper: #d8cebd;
+  --color-paper-alt: #e1d7c7;
+  --color-surface: #e9dece;
+  --color-ink: #211712;
+  --color-ink-muted: #68584d;
+  --color-accent: #170f0b;
+  --color-accent-soft: rgba(33, 23, 18, 0.08);
+  --color-line: #c6b9a6;
+  --color-line-strong: #aa9984;
+  --color-line-soft: rgba(33, 23, 18, 0.08);
+  --color-action-highlight: rgba(38, 25, 18, 0.08);
+  --color-action-highlight-strong: rgba(38, 25, 18, 0.14);
+  --color-project-highlight: rgba(52, 34, 24, 0.15);
+  --color-project-highlight-strong: rgba(52, 34, 24, 0.22);
+  --color-project-band: rgba(33, 23, 18, 0.08);
+  --color-project-band-strong: rgba(33, 23, 18, 0.12);
+  --color-project-rail: rgba(28, 19, 14, 0.3);
+  --color-project-ink-strong: #170f0b;
+  --project-motion-duration: 140ms;
+  --project-motion-ease: ease-out;
 
   --radius-s: 4px;
   --radius-m: 6px;
@@ -76,7 +83,7 @@ and collapse to monochrome symbols for fast repeat usage.
 
   --sidebar-open-width: 204px;
   --sidebar-closed-width: 54px;
-  --focus-ring: 2px solid rgba(0, 0, 0, 0.48);
+  --focus-ring: 2px solid rgba(24, 15, 10, 0.38);
 }
 
 * {
@@ -92,11 +99,11 @@ body {
 
 body {
   font-family: var(--font-body);
-  font-weight: 400;
+  font-weight: 450;
   font-size: 15px;
   line-height: 1.65;
   color: var(--color-ink);
-  background: var(--color-paper);
+  background: radial-gradient(ellipse at 52% 38%, #ece1d1 0%, var(--color-paper) 70%);
   overflow: hidden;
 }
 
@@ -104,14 +111,14 @@ body::after {
   content: "";
   position: fixed;
   inset: 0;
-  background: radial-gradient(ellipse at center, transparent 55%, rgba(100, 80, 40, 0.04) 100%);
+  background: radial-gradient(ellipse at center, transparent 38%, rgba(54, 37, 26, 0.16) 100%);
   pointer-events: none;
   z-index: 999;
 }
 
 ::selection {
-  background: rgba(185, 160, 95, 0.3);
-  color: var(--color-ink);
+  background: rgba(63, 42, 30, 0.68);
+  color: #f6f0e8;
 }
 
 #app-shell {
@@ -135,7 +142,7 @@ body.is-sidebar-collapsed #app-shell {
   height: 100%;
   border-radius: var(--radius-l);
   border: none;
-  background: #f6f5f2;
+  background: #ddd1c0;
   padding: 10px 10px 9px;
   display: flex;
   flex-direction: column;
@@ -148,7 +155,7 @@ body.is-sidebar-collapsed #app-shell {
   content: "";
   position: absolute;
   inset: 0;
-  border: 1.6px solid var(--color-line-strong);
+  border: 1px solid rgba(29, 20, 15, 0.1);
   border-radius: var(--radius-l);
   pointer-events: none;
 }
@@ -191,7 +198,7 @@ body.is-sidebar-collapsed #app-shell {
 }
 
 .sidebar-toggle:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.08);
+  background: var(--color-action-highlight-strong);
 }
 
 .brand-block {
@@ -203,13 +210,15 @@ body.is-sidebar-collapsed #app-shell {
 .brand-block h1 {
   margin: 0;
   font-family: var(--font-heading);
-  font-size: 1.15rem;
-  font-weight: 700;
+  font-size: 1.3rem;
+  font-weight: 780;
   line-height: 1.05;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.06em;
+  font-variant-caps: small-caps;
+  text-shadow: 0 1px 0 rgba(255, 246, 234, 0.95);
   color: var(--color-accent);
   padding-bottom: 3px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  border-bottom: 1px solid rgba(29, 20, 15, 0.14);
 }
 
 .brand-block p {
@@ -234,14 +243,14 @@ body.is-sidebar-collapsed #app-shell {
   /* Group boundaries are separators, not nested boxes, to keep the column visually calm. */
   margin-top: 2px;
   padding-top: 8px;
-  border-top: 1px solid var(--color-line-soft);
+  border-top: 1px solid rgba(29, 20, 15, 0.1);
 }
 
 /* Secondary actions remain one-click visible instead of hiding behind overflow controls. */
 .secondary-actions {
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid var(--color-line-soft);
+  border-top: 1px solid rgba(29, 20, 15, 0.1);
 }
 
 button {
@@ -338,12 +347,12 @@ button {
 }
 
 button:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.06);
-  border-color: rgba(0, 0, 0, 0.56);
+  background: var(--color-action-highlight);
+  border-color: rgba(29, 20, 15, 0.3);
 }
 
 button:active:not(:disabled) {
-  background: rgba(0, 0, 0, 0.1);
+  background: var(--color-action-highlight-strong);
 }
 
 button:disabled {
@@ -422,8 +431,8 @@ body.is-sidebar-collapsed .sidebar-toggle {
   background-image: linear-gradient(
     to right,
     transparent calc(50% - 0.5px),
-    rgba(0, 0, 0, 0.06) calc(50% - 0.5px),
-    rgba(0, 0, 0, 0.06) calc(50% + 0.5px),
+    rgba(35, 24, 17, 0.08) calc(50% - 0.5px),
+    rgba(35, 24, 17, 0.08) calc(50% + 0.5px),
     transparent calc(50% + 0.5px)
   );
 }
@@ -437,12 +446,12 @@ body.is-sidebar-collapsed .sidebar-toggle {
 }
 
 #canvas::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.12);
+  background: rgba(67, 45, 31, 0.22);
   border-radius: 3px;
 }
 
 #canvas::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.22);
+  background: rgba(67, 45, 31, 0.32);
 }
 
 .campaign-card {
@@ -455,7 +464,7 @@ body.is-sidebar-collapsed .sidebar-toggle {
   flex-direction: column;
   gap: 10px;
   min-height: 200px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 7px 18px rgba(43, 29, 20, 0.14), inset 0 1px 0 rgba(255, 247, 236, 0.58);
   transition: box-shadow 200ms ease, transform 200ms ease;
   /* Explicit content-sized height prevents grid stretch behavior from hiding overflow growth. */
   height: max-content;
@@ -470,7 +479,7 @@ body.is-sidebar-collapsed .sidebar-toggle {
   content: "";
   position: absolute;
   inset: 0;
-  border: 2px solid var(--color-line-strong);
+  border: 1px solid rgba(30, 20, 15, 0.1);
   border-radius: var(--radius-l);
   pointer-events: none;
 }
@@ -491,8 +500,8 @@ body.is-sidebar-collapsed .sidebar-toggle {
 }
 
 .campaign-card:hover {
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.07);
-  transform: translateY(-1px);
+  box-shadow: 0 16px 32px rgba(35, 24, 17, 0.24), 0 0 54px rgba(76, 50, 36, 0.1), 0 0 1px rgba(30, 20, 14, 0.22);
+  transform: translateY(-2px);
   z-index: 2;
 }
 
@@ -504,14 +513,18 @@ body.is-sidebar-collapsed .sidebar-toggle {
 }
 
 .campaign-title {
+  /* Campaign emphasis stays subtle by using the same family with tuned weight/spacing. */
   margin: 0;
   padding: 0 2px;
   border-radius: var(--radius-s);
   font-family: var(--font-heading);
-  font-size: 1.55rem;
-  font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: -0.01em;
+  font-size: 1.74rem;
+  font-weight: 760;
+  line-height: 1.02;
+  letter-spacing: 0.012em;
+  font-variation-settings: "wght" 760;
+  /* Keep lift visible on warm parchment backgrounds without introducing a dramatic glow. */
+  text-shadow: 0 1px 0 rgba(255, 245, 233, 0.74), 0 2px 6px rgba(52, 34, 24, 0.16);
   color: var(--color-accent);
   user-select: text;
   cursor: text;
@@ -521,7 +534,7 @@ body.is-sidebar-collapsed .sidebar-toggle {
 }
 
 .campaign-title:focus {
-  background: var(--color-accent-soft);
+  background: var(--color-action-highlight);
   outline: none;
   white-space: normal;
 }
@@ -553,13 +566,14 @@ body.is-sidebar-collapsed .sidebar-toggle {
   right: 0;
   min-width: 166px;
   border-radius: var(--radius-s);
-  border: 1px solid var(--color-line-strong);
-  background: var(--color-paper);
+  border: 1px solid rgba(28, 18, 14, 0.16);
+  background: #e4d9ca;
   display: none;
   flex-direction: column;
   gap: 0;
   z-index: 60;
   pointer-events: auto;
+  box-shadow: 0 8px 22px rgba(38, 26, 19, 0.2);
 }
 
 .mission-menu[data-open="true"] {
@@ -569,7 +583,7 @@ body.is-sidebar-collapsed .sidebar-toggle {
 .mission-menu button {
   border: 0;
   border-radius: 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.14);
+  border-bottom: 1px solid rgba(28, 18, 14, 0.12);
   text-align: left;
   font-size: 0.88rem;
   font-weight: 500;
@@ -598,8 +612,8 @@ body.is-sidebar-collapsed .sidebar-toggle {
   overflow-y: auto;
   padding: 5px 8px 5px 10px;
   border-radius: var(--radius-s);
-  border-left: 2px solid rgba(120, 100, 60, 0.35);
-  background: rgba(100, 80, 40, 0.06);
+  border-left: 2px solid rgba(45, 30, 22, 0.32);
+  background: rgba(45, 30, 22, 0.08);
   outline: none;
   font-family: var(--font-body);
   font-size: 0.96rem;
@@ -610,13 +624,13 @@ body.is-sidebar-collapsed .sidebar-toggle {
 }
 
 .mission-block[data-empty="true"] .mission-editor {
-  background: rgba(100, 80, 40, 0.035);
-  border-left-color: rgba(120, 100, 60, 0.25);
+  background: rgba(45, 30, 22, 0.045);
+  border-left-color: rgba(45, 30, 22, 0.2);
 }
 
 .mission-editor:focus {
-  background: rgba(100, 80, 40, 0.09);
-  border-left-color: rgba(120, 100, 60, 0.55);
+  background: rgba(45, 30, 22, 0.13);
+  border-left-color: rgba(45, 30, 22, 0.44);
 }
 
 .mission-editor[data-empty="true"]::before {
@@ -627,7 +641,7 @@ body.is-sidebar-collapsed .sidebar-toggle {
 .previous-mission {
   margin: 0;
   padding-left: 9px;
-  border-left: 2px solid rgba(120, 100, 60, 0.22);
+  border-left: 2px solid rgba(45, 30, 22, 0.22);
   font-size: 0.88rem;
   font-style: italic;
   color: var(--color-ink-muted);
@@ -639,11 +653,17 @@ body.is-sidebar-collapsed .sidebar-toggle {
 }
 
 .projects-block {
+  /* Projects are framed as a folio zone so execution work reads as the card's main payload. */
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   /* Keep project content anchored toward the top rather than vertically centered in tall cards. */
   flex: 0 0 auto;
+  margin-top: 4px;
+  padding: 8px 10px 9px;
+  border-radius: var(--radius-m);
+  background: linear-gradient(to bottom, var(--color-project-band) 0%, rgba(255, 251, 244, 0.38) 100%);
+  box-shadow: inset 0 0 0 1px rgba(28, 19, 14, 0.12);
 }
 
 .projects-header {
@@ -651,24 +671,26 @@ body.is-sidebar-collapsed .sidebar-toggle {
   align-items: center;
   justify-content: flex-start;
   gap: var(--space-2);
+  margin-bottom: 1px;
 }
 
 .projects-header::after {
   content: "";
   flex: 1;
   height: 1px;
-  background: rgba(0, 0, 0, 0.09);
+  background: rgba(35, 24, 17, 0.18);
   margin-left: 2px;
 }
 
 .projects-label {
   margin: 0;
-  color: var(--color-accent);
-  font-family: var(--font-ui);
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  color: var(--color-project-ink-strong);
+  font-family: var(--font-heading);
+  font-size: 0.86rem;
+  font-weight: 790;
+  letter-spacing: 0.19em;
   text-transform: uppercase;
+  font-variant-caps: all-small-caps;
 }
 
 .projects-add-icon {
@@ -677,17 +699,19 @@ body.is-sidebar-collapsed .sidebar-toggle {
   height: 20px;
   padding: 0;
   border: 0;
-  color: var(--color-accent);
+  color: var(--color-project-ink-strong);
   background: transparent;
-  font-size: 0.92rem;
-  font-weight: 600;
+  font-size: 0.88rem;
+  font-weight: 560;
   line-height: 1;
   border-radius: var(--radius-s);
-  transition: background-color 120ms ease;
+  opacity: 0.72;
+  transition: background-color var(--project-motion-duration) var(--project-motion-ease), opacity var(--project-motion-duration) var(--project-motion-ease);
 }
 
 .projects-add-icon:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.09);
+  background: var(--color-project-band-strong);
+  opacity: 1;
   border-color: transparent;
 }
 
@@ -697,8 +721,8 @@ body.is-sidebar-collapsed .sidebar-toggle {
   /* We intentionally avoid internal scrolling so the campaign card grows with project volume. */
   overflow-y: visible;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 7px;
   align-content: start;
   padding-right: 0;
   max-height: none;
@@ -707,14 +731,20 @@ body.is-sidebar-collapsed .sidebar-toggle {
 .projects-empty {
   margin: 0;
   grid-column: 1 / -1;
-  color: var(--color-ink-muted);
-  font-size: 1rem;
-  line-height: 1.55;
+  color: var(--color-ink);
+  font-size: 1.02rem;
+  line-height: 1.5;
+  opacity: 0.84;
 }
 
-/* Each project entry stays compact and textual, with edit control nearby but not dominant. */
+/* Rows use an ink rail and framed backdrop so projects stay legible under heavy campaign density. */
 .campaign-project-row {
   position: relative;
+  border-left: 1.5px solid var(--color-project-rail);
+  border-radius: var(--radius-s);
+  padding: 2px 2px 2px 8px;
+  background: rgba(33, 23, 18, 0.04);
+  transition: background-color var(--project-motion-duration) var(--project-motion-ease);
 }
 
 .project-launch {
@@ -723,33 +753,37 @@ body.is-sidebar-collapsed .sidebar-toggle {
   width: 100%;
   border: 0;
   padding-right: 34px;
-  padding-top: 5px;
-  padding-bottom: 5px;
+  padding-top: 6px;
+  padding-bottom: 6px;
   text-align: left;
-  font-size: 0.95rem;
-  font-weight: 500;
+  /* Project names are emphasized through weight plus a whisper of contrast shadow, not larger sizing. */
+  color: var(--color-project-ink-strong);
+  font-size: 1.03rem;
+  font-weight: 700;
+  letter-spacing: 0.003em;
+  text-shadow: 0 1px 0 rgba(255, 248, 238, 0.46);
   line-height: 1.4;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   background: transparent;
-  transition: transform 120ms ease;
+  transition: transform var(--project-motion-duration) var(--project-motion-ease), color var(--project-motion-duration) var(--project-motion-ease);
 }
 
 /* Project chips are rendered as highlighter strokes so they feel textual, not button-box UI. */
 .project-launch::before {
   content: "";
   position: absolute;
-  left: 2px;
+  left: 0;
   right: 28px;
   top: 52%;
-  height: 74%;
+  height: 78%;
   transform: translateY(-50%) rotate(-0.24deg);
   border-radius: 3px;
   background: var(--color-project-highlight);
   pointer-events: none;
   z-index: -1;
-  transition: background-color 120ms ease;
+  transition: background-color var(--project-motion-duration) var(--project-motion-ease);
 }
 
 .project-launch:hover::before,
@@ -757,12 +791,21 @@ body.is-sidebar-collapsed .sidebar-toggle {
   background: var(--color-project-highlight-strong);
 }
 
+.campaign-project-row:hover {
+  background: rgba(33, 23, 18, 0.06);
+}
+
+.project-launch:hover,
+.project-launch:focus-visible {
+  transform: translateY(-0.5px);
+}
+
 .project-launch:active {
-  transform: translateY(0.5px);
+  transform: translateY(0);
 }
 
 .project-launch.is-physical {
-  text-decoration: underline dotted rgba(0, 0, 0, 0.5);
+  text-decoration: underline dotted rgba(28, 18, 13, 0.62);
   text-underline-offset: 2px;
 }
 
@@ -772,8 +815,8 @@ body.is-sidebar-collapsed .sidebar-toggle {
   left: 8px;
   top: calc(100% + 4px);
   border-radius: var(--radius-s);
-  background: var(--color-accent);
-  color: var(--color-paper);
+  background: #eee4d5;
+  color: var(--color-project-ink-strong);
   font-size: 0.8rem;
   font-weight: 500;
   line-height: 1.2;
@@ -781,6 +824,7 @@ body.is-sidebar-collapsed .sidebar-toggle {
   padding: 5px 7px;
   pointer-events: none;
   z-index: 2;
+  border: 1px solid rgba(35, 24, 17, 0.18);
 }
 
 .project-edit-icon {
@@ -796,14 +840,21 @@ body.is-sidebar-collapsed .sidebar-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-accent);
-  background: transparent;
+  color: var(--color-project-ink-strong);
+  background: rgba(33, 23, 18, 0.04);
   border-radius: var(--radius-s);
-  transition: background-color 120ms ease;
+  opacity: 0.74;
+  transition: background-color var(--project-motion-duration) var(--project-motion-ease), opacity var(--project-motion-duration) var(--project-motion-ease);
+}
+
+.campaign-project-row:hover .project-edit-icon,
+.project-edit-icon:focus-visible {
+  opacity: 0.95;
 }
 
 .project-edit-icon:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.1);
+  background: var(--color-project-band-strong);
+  opacity: 1;
   border-color: transparent;
 }
 
@@ -819,7 +870,7 @@ body.is-sidebar-collapsed .sidebar-toggle {
 
 .campaign-slot-empty {
   border-style: none;
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(43, 29, 21, 0.04);
   justify-content: center;
   align-items: flex-start;
 }
@@ -827,9 +878,10 @@ body.is-sidebar-collapsed .sidebar-toggle {
 .empty-slot-title {
   margin: 0;
   font-family: var(--font-heading);
-  font-size: 1.5rem;
-  font-weight: 700;
-  line-height: 1.2;
+  font-size: 1.65rem;
+  font-weight: 780;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
   color: var(--color-accent);
 }
 
@@ -852,10 +904,10 @@ body.is-sidebar-collapsed .sidebar-toggle {
   bottom: var(--space-2);
   width: min(430px, calc(100% - 40px));
   border-radius: var(--radius-l);
-  border: 1px solid var(--color-line-strong);
-  background: var(--color-paper);
+  border: 1px solid rgba(26, 17, 12, 0.16);
+  background: #e3d8c9;
   padding: var(--space-4);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 18px 38px rgba(37, 25, 18, 0.23), 0 0 1px rgba(40, 28, 20, 0.2);
 }
 
 #panel-root[hidden] {
@@ -872,9 +924,10 @@ body.is-sidebar-collapsed .sidebar-toggle {
 .panel-header h3 {
   margin: 0;
   font-family: var(--font-heading);
-  font-size: 1.15rem;
-  font-weight: 700;
-  line-height: 1.25;
+  font-size: 1.25rem;
+  font-weight: 760;
+  line-height: 1.15;
+  letter-spacing: 0.025em;
   color: var(--color-accent);
 }
 
@@ -893,10 +946,10 @@ body.is-sidebar-collapsed .sidebar-toggle {
 .panel-field label {
   font-family: var(--font-ui);
   color: var(--color-ink-muted);
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 0.74rem;
+  font-weight: 650;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.11em;
 }
 
 .panel-field input,
@@ -910,7 +963,7 @@ body.is-sidebar-collapsed .sidebar-toggle {
   font-size: 0.92rem;
   line-height: 1.5;
   color: var(--color-ink);
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 250, 243, 0.62);
 }
 
 .panel-field textarea {
@@ -938,7 +991,7 @@ body.is-sidebar-collapsed .sidebar-toggle {
   gap: 6px;
   border: 1px solid var(--color-line);
   border-radius: var(--radius-s);
-  background: rgba(255, 255, 255, 0.45);
+  background: rgba(255, 249, 240, 0.56);
   padding: 5px 9px;
 }
 
@@ -967,7 +1020,7 @@ body.is-sidebar-collapsed .sidebar-toggle {
 .panel-error {
   min-height: 18px;
   margin: 6px 0 0;
-  color: #1d1d1d;
+  color: #6f3022;
   font-size: 0.88rem;
   line-height: 1.45;
 }
@@ -982,33 +1035,33 @@ body.is-sidebar-collapsed .sidebar-toggle {
 .panel-warning {
   margin: 10px 0;
   border-radius: var(--radius-m);
-  border: 1px solid rgba(0, 0, 0, 0.44);
-  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(38, 25, 18, 0.18);
+  background: rgba(38, 25, 18, 0.06);
   padding: 10px 12px;
 }
 
 .panel-warning h4 {
   margin: 0;
-  color: #1c1c1c;
+  color: var(--color-accent);
   font-size: 0.94rem;
   line-height: 1.35;
 }
 
 .panel-warning p {
   margin: 7px 0 0;
-  color: #222222;
+  color: var(--color-ink);
   font-size: 0.88rem;
   line-height: 1.45;
 }
 
 .destructive-action {
-  border-color: rgba(0, 0, 0, 0.6);
-  color: #111111;
-  background: rgba(0, 0, 0, 0.07);
+  border-color: rgba(120, 58, 46, 0.5);
+  color: #7b3f33;
+  background: rgba(120, 58, 46, 0.08);
 }
 
 .destructive-action:hover {
-  background: rgba(0, 0, 0, 0.14);
+  background: rgba(120, 58, 46, 0.14);
 }
 
 @media (max-width: 1320px) {
@@ -1029,7 +1082,7 @@ body.is-sidebar-collapsed .sidebar-toggle {
   }
 
   .brand-block h1 {
-    font-size: 1.25rem;
+    font-size: 1.18rem;
   }
 
   .brand-block p {
@@ -1037,7 +1090,7 @@ body.is-sidebar-collapsed .sidebar-toggle {
   }
 
   .campaign-title {
-    font-size: 1.35rem;
+    font-size: 1.5rem;
   }
 }
 
@@ -1060,7 +1113,4 @@ body.is-sidebar-collapsed .sidebar-toggle {
     bottom: var(--space-3);
   }
 
-  .projects-list {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }

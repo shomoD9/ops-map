@@ -1,5 +1,5 @@
 /*
-This file defines export/import transfer contracts for Return state.
+This file defines export/import transfer contracts for Resume state.
 It exists separately so serialization, validation, and filename rules stay pure and reusable instead of being buried in UI handlers.
 `src/main.js` uses these functions to build downloadable snapshots and safely parse uploaded files before replacing in-memory state.
 */

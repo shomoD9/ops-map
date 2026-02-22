@@ -30,7 +30,7 @@ export async function loadDevicePrefs() {
     return new Promise((resolve) => {
       chrome.storage.local.get([DEVICE_PREFS_KEY], (result) => {
         if (chrome.runtime?.lastError) {
-          console.warn("Return: failed to read local device preferences.", getRuntimeErrorMessage());
+          console.warn("Resume: failed to read local device preferences.", getRuntimeErrorMessage());
           resolve({ ...DEFAULT_DEVICE_PREFS });
           return;
         }
@@ -44,7 +44,7 @@ export async function loadDevicePrefs() {
     const raw = localStorage.getItem(DEVICE_PREFS_KEY);
     return normalizeDevicePrefs(raw ? JSON.parse(raw) : null);
   } catch (error) {
-    console.warn("Return: failed to read local preference fallback storage.", error);
+    console.warn("Resume: failed to read local preference fallback storage.", error);
     return { ...DEFAULT_DEVICE_PREFS };
   }
 }
@@ -68,7 +68,7 @@ export async function saveDevicePrefs(nextPrefs) {
   try {
     localStorage.setItem(DEVICE_PREFS_KEY, JSON.stringify(normalized));
   } catch (error) {
-    console.warn("Return: failed to save local preference fallback storage.", error);
+    console.warn("Resume: failed to save local preference fallback storage.", error);
   }
 }
 
@@ -98,7 +98,7 @@ export function subscribeToDevicePrefsChanges(onChange) {
     try {
       onChange(normalizeDevicePrefs(event.newValue ? JSON.parse(event.newValue) : null));
     } catch (error) {
-      console.warn("Return: failed to parse local preference storage event payload.", error);
+      console.warn("Resume: failed to parse local preference storage event payload.", error);
     }
   };
 

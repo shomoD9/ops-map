@@ -1,5 +1,5 @@
 /*
-This stylesheet defines Return's vanilla design system.
+This stylesheet defines Resume's vanilla design system.
 It exists as a separate file so `src/main.js` can switch between vanilla and bhadralok aesthetics
 by swapping one stylesheet link, without changing domain logic or render structure.
 It styles the shell in `newtab.html` and class hooks emitted by `src/main.js`, using a monochrome

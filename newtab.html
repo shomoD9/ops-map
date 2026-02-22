@@ -1,5 +1,5 @@
 <!--
-This file is the one-document shell for the Return new-tab experience.
+This file is the one-document shell for the Resume new-tab experience.
 It exists as a separate file so the browser can load one stable structure quickly while `src/main.js`
 renders live campaign data into it.
 It provides the collapsible sidebar controls, the fixed campaign board container, and the lightweight
@@ -12,12 +12,12 @@ to icon-only mode for fast muscle-memory interaction, including the synced mood 
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Return</title>
+    <title>Resume</title>
     <link id="theme-stylesheet" rel="stylesheet" href="styles/newtab.css" />
   </head>
   <body class="is-sidebar-collapsed">
     <div id="app-shell">
-      <aside id="side-bar" class="side-bar" aria-label="Return controls">
+      <aside id="side-bar" class="side-bar" aria-label="Resume controls">
         <div class="side-head">
           <button
             id="sidebar-toggle"
@@ -29,7 +29,7 @@ to icon-only mode for fast muscle-memory interaction, including the synced mood 
             >>
           </button>
           <div class="brand-block">
-            <h1>Return</h1>
+            <h1>Resume</h1>
             <p id="state-summary">Loading your campaigns...</p>
           </div>
         </div>

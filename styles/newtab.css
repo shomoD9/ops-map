@@ -1,5 +1,5 @@
 /*
-This stylesheet defines Return's bhadralok gothic design system.
+This stylesheet defines Resume's bhadralok gothic design system.
 It exists separately from behavior code so typography, spacing, and visual hierarchy can evolve
 without changing domain logic in JavaScript.
 It styles the shell in `newtab.html` and class hooks emitted by `src/main.js`, using a parchment-forward
